@@ -1,4 +1,5 @@
 import type { Metadata } from "next";
+import Link from "next/link";
 import { ClerkProvider } from "@clerk/nextjs";
 import { plPL } from "@clerk/localizations";
 import { SiteHeader } from "@/components/SiteHeader";
@@ -52,6 +53,12 @@ export default async function RootLayout({
               <div className="mx-auto flex w-full max-w-6xl flex-wrap items-center justify-between gap-4 px-4 py-8 text-sm text-slate-500 sm:px-6">
                 <Logo size={24} />
                 <p>{t("footer.tagline")}</p>
+                <Link
+                  href="/about"
+                  className="font-semibold text-slate-400 hover:text-volt-300"
+                >
+                  {t("nav.about")}
+                </Link>
               </div>
             </footer>
           </body>

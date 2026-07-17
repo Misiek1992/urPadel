@@ -29,9 +29,19 @@ const pl: Dictionary = {
     clubManager: "Panel klubu",
     superAdmin: "Super admin",
     signIn: "Zaloguj się",
+    about: "O nas",
   },
   footer: {
     tagline: "Stworzone dla klubów padla — Americano · Mexicano · Rankingi",
+  },
+  about: {
+    title: "O nas",
+    intro:
+      "urPadel powstał, aby ułatwić organizowanie turniejów Americano i Mexicano — automatyczne pary, wyniki na żywo na każdym korcie i ranking klubowy, dzięki któremu gracze wracają.",
+    authorHeading: "Autor",
+    authorName: "Michał Ignaczak",
+    contactHeading: "Kontakt",
+    contactText: "Masz pytania, uwagi lub pomysły? Napisz do nas:",
   },
   notFound: {
     eyebrow: "404",
@@ -47,7 +57,6 @@ const pl: Dictionary = {
     titleAmericano: "Americano",
     titleAnd: "i",
     titleMexicano: "Mexicano",
-    titleLine2: "wieczory",
     subtitle:
       "urPadel organizuje cały wieczór: automatyczne pary, aktualna strona dla każdego kortu, wyniki po każdej rundzie i ranking klubowy, który sprawia, że gracze wracają przez cały rok.",
     exploreClubs: "Przeglądaj kluby",

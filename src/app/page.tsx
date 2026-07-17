@@ -70,8 +70,7 @@ export default async function LandingPage() {
             {t("home.titleLine1")}{" "}
             <span className="text-volt-400">{t("home.titleAmericano")}</span>{" "}
             {t("home.titleAnd")}{" "}
-            <span className="text-volt-400">{t("home.titleMexicano")}</span>{" "}
-            {t("home.titleLine2")}
+            <span className="text-volt-400">{t("home.titleMexicano")}</span>
           </h1>
           <p className="mt-5 max-w-xl text-lg text-slate-400">{t("home.subtitle")}</p>
           <div className="mt-8 flex flex-wrap gap-3">

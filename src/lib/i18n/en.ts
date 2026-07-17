@@ -21,9 +21,19 @@ const en = {
     clubManager: "Club manager",
     superAdmin: "Super admin",
     signIn: "Sign in",
+    about: "About us",
   },
   footer: {
     tagline: "Built for padel clubs — Americano · Mexicano · Rankings",
+  },
+  about: {
+    title: "About us",
+    intro:
+      "urPadel was built to make organizing Americano and Mexicano padel tournaments simple — automatic pairings, live scoring at every court, and a club ranking that keeps players coming back.",
+    authorHeading: "Author",
+    authorName: "Michał Ignaczak",
+    contactHeading: "Contact",
+    contactText: "Questions, feedback or ideas? Get in touch:",
   },
   notFound: {
     eyebrow: "404",
@@ -39,7 +49,6 @@ const en = {
     titleAmericano: "Americano",
     titleAnd: "&",
     titleMexicano: "Mexicano",
-    titleLine2: "nights",
     subtitle:
       "urPadel organizes the whole evening: automatic pairings, a live page for every court, round-by-round results and a club ranking that keeps players coming back all year.",
     exploreClubs: "Explore clubs",

@@ -84,6 +84,15 @@ export function ScoreForm({
 
   const xl = size === "xl";
   const big = size === "lg" || xl;
+  // Hide the number-input spin buttons — they eat horizontal space and are
+  // useless on touch kiosks, where these inputs must fit two big digits.
+  const noSpin =
+    "[appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none";
+  const sizeClasses = xl
+    ? "h-24 w-40 border-2 border-white/25 bg-white/10 px-1 text-6xl focus:border-volt-400"
+    : big
+      ? "h-16 w-28 px-1 text-3xl"
+      : "w-16 px-1";
   return (
     <form onSubmit={submit} className="w-full">
       <div className={cn("flex items-center justify-center", xl ? "gap-4" : "gap-2")}>
@@ -95,14 +104,7 @@ export function ScoreForm({
           value={scoreA}
           onChange={(e) => handleA(e.target.value)}
           aria-label="Side A score"
-          className={cn(
-            "text-center font-bold",
-            xl
-              ? "h-24 w-28 border-2 border-white/25 bg-white/10 text-5xl focus:border-volt-400"
-              : big
-                ? "h-16 w-24 text-3xl"
-                : "w-16"
-          )}
+          className={cn("text-center font-bold", noSpin, sizeClasses)}
         />
         <span
           className={cn(
@@ -123,14 +125,7 @@ export function ScoreForm({
             setScoreB(e.target.value);
           }}
           aria-label="Side B score"
-          className={cn(
-            "text-center font-bold",
-            xl
-              ? "h-24 w-28 border-2 border-white/25 bg-white/10 text-5xl focus:border-volt-400"
-              : big
-                ? "h-16 w-24 text-3xl"
-                : "w-16"
-          )}
+          className={cn("text-center font-bold", noSpin, sizeClasses)}
         />
         <Button
           type="submit"

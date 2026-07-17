@@ -1,0 +1,95 @@
+@import "tailwindcss";
+
+@theme {
+  --color-navy-950: #050b17;
+  --color-navy-900: #0a1425;
+  --color-navy-850: #0d1a30;
+  --color-navy-800: #12213d;
+  --color-navy-700: #1a3157;
+  --color-navy-600: #24437a;
+  --color-volt-300: #eaff8f;
+  --color-volt-400: #d9f954;
+  --color-volt-500: #c3e830;
+  --color-volt-600: #a2c614;
+  --color-ocean-400: #4aa8ff;
+  --color-ocean-500: #2f7de1;
+  --font-sans: "Avenir Next", "Helvetica Neue", ui-sans-serif, system-ui,
+    -apple-system, "Segoe UI", Roboto, sans-serif;
+}
+
+body {
+  @apply min-h-screen bg-navy-950 text-slate-200 antialiased;
+  background-image:
+    radial-gradient(1200px 600px at 85% -10%, rgba(217, 249, 84, 0.07), transparent 60%),
+    radial-gradient(900px 520px at -10% 15%, rgba(47, 125, 225, 0.12), transparent 55%);
+  background-attachment: fixed;
+}
+
+@layer components {
+  .card {
+    @apply rounded-2xl border border-white/10 bg-white/[0.04] shadow-xl shadow-black/20 backdrop-blur-sm;
+  }
+  .card-pad {
+    @apply p-5 sm:p-6;
+  }
+  .btn {
+    @apply inline-flex items-center justify-center gap-2 rounded-xl px-4 py-2 text-sm font-semibold transition-colors disabled:cursor-not-allowed disabled:opacity-50;
+  }
+  .btn-primary {
+    @apply bg-volt-400 text-navy-950 hover:bg-volt-300;
+  }
+  .btn-secondary {
+    @apply border border-white/10 bg-white/10 text-white hover:bg-white/15;
+  }
+  .btn-ghost {
+    @apply text-slate-300 hover:bg-white/5 hover:text-white;
+  }
+  .btn-danger {
+    @apply bg-red-500/90 text-white hover:bg-red-500;
+  }
+  .btn-sm {
+    @apply px-3 py-1.5 text-xs;
+  }
+  .btn-lg {
+    @apply px-6 py-3 text-base;
+  }
+  .input {
+    @apply w-full rounded-xl border border-white/10 bg-navy-900/80 px-3.5 py-2.5 text-sm text-white placeholder:text-slate-500 focus:border-volt-400/70 focus:outline-none focus:ring-2 focus:ring-volt-400/20;
+  }
+  .label {
+    @apply mb-1.5 block text-xs font-semibold uppercase tracking-wider text-slate-400;
+  }
+  .table-wrap {
+    @apply overflow-x-auto rounded-2xl border border-white/10 bg-white/[0.02];
+  }
+  .table-base {
+    @apply w-full min-w-full border-collapse text-sm;
+  }
+  .table-base thead th {
+    @apply border-b border-white/10 bg-white/[0.03] px-3 py-2.5 text-left text-[11px] font-semibold uppercase tracking-wider text-slate-400;
+  }
+  .table-base tbody td {
+    @apply border-b border-white/5 px-3 py-2.5 align-middle;
+  }
+  .table-base tbody tr:last-child td {
+    @apply border-b-0;
+  }
+  .badge {
+    @apply inline-flex items-center gap-1 rounded-full px-2.5 py-0.5 text-[11px] font-semibold;
+  }
+  .badge-volt {
+    @apply bg-volt-400/15 text-volt-300;
+  }
+  .badge-blue {
+    @apply bg-ocean-500/20 text-sky-300;
+  }
+  .badge-red {
+    @apply bg-red-500/15 text-red-300;
+  }
+  .badge-slate {
+    @apply bg-white/10 text-slate-300;
+  }
+  .section-title {
+    @apply text-lg font-bold text-white;
+  }
+}

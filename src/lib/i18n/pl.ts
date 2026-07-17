@@ -58,12 +58,12 @@ const pl: Dictionary = {
     titleAnd: "i",
     titleMexicano: "Mexicano",
     subtitle:
-      "urPadel organizuje cały wieczór: automatyczne pary, aktualna strona dla każdego kortu, wyniki po każdej rundzie i ranking klubowy, który sprawia, że gracze wracają przez cały rok.",
+      "urPadel organizuje cały turniej: automatyczne pary, aktualna strona dla każdego kortu, wyniki po każdej rundzie i ranking klubowy, który sprawia, że gracze wracają przez cały rok.",
     exploreClubs: "Przeglądaj kluby",
     organizeTournament: "Zorganizuj turniej",
     formatsHeading: "Cztery formaty, jeden proces",
     formatsFooter:
-      "Każdy zdobyty punkt liczy się do wyniku indywidualnego (lub drużynowego) — wynik 16–8 daje zwycięzcom po 16 punktów, a przegranym po 8. Najwyższa suma wygrywa wieczór.",
+      "Każdy zdobyty punkt liczy się do wyniku indywidualnego (lub drużynowego) — wynik 16–8 daje zwycięzcom po 16 punktów, a przegranym po 8. Najwyższa suma wygrywa turniej.",
     howItWorksHeading: "Jak to działa",
     how1Title: "Wybierz format",
     how1Text:
@@ -292,7 +292,7 @@ const pl: Dictionary = {
     pointsWholeError: "Punkty muszą być liczbą całkowitą.",
   },
   wizard: {
-    pageSubtitle: "Zorganizuj wieczór Americano lub Mexicano.",
+    pageSubtitle: "Zorganizuj turniej Americano lub Mexicano.",
     organizingFor: "Organizujesz dla",
     stepFormat: "Format",
     stepBasics: "Podstawy",

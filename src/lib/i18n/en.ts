@@ -50,12 +50,12 @@ const en = {
     titleAnd: "&",
     titleMexicano: "Mexicano",
     subtitle:
-      "urPadel organizes the whole evening: automatic pairings, a live page for every court, round-by-round results and a club ranking that keeps players coming back all year.",
+      "urPadel organizes the whole tournament: automatic pairings, a live page for every court, round-by-round results and a club ranking that keeps players coming back all year.",
     exploreClubs: "Explore clubs",
     organizeTournament: "Organize a tournament",
     formatsHeading: "Four formats, one flow",
     formatsFooter:
-      "Every rally point counts towards the individual (or team) score — a 16–8 result gives the winners 16 points each and the losers 8. The highest total wins the night.",
+      "Every rally point counts towards the individual (or team) score — a 16–8 result gives the winners 16 points each and the losers 8. The highest total wins the tournament.",
     howItWorksHeading: "How it works",
     how1Title: "Pick your format",
     how1Text:
@@ -285,7 +285,7 @@ const en = {
     pointsWholeError: "Points must be a whole number.",
   },
   wizard: {
-    pageSubtitle: "Set up an Americano or Mexicano night.",
+    pageSubtitle: "Set up an Americano or Mexicano tournament.",
     organizingFor: "Organizing for",
     stepFormat: "Format",
     stepBasics: "Basics",

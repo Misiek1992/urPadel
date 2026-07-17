@@ -143,6 +143,16 @@ export function TournamentControl({
       {/* Action bar */}
       {isActive && round && (
         <div className="card card-pad">
+          <div className="mb-4 flex flex-wrap items-center justify-between gap-3 rounded-xl border border-volt-400/20 bg-volt-400/[0.05] px-4 py-3">
+            <p className="text-sm text-slate-300">{t("control.presenterHint")}</p>
+            <Link
+              href={`/manager/tournaments/${tournament._id}/present`}
+              target="_blank"
+              className="btn btn-primary btn-sm shrink-0"
+            >
+              {t("control.openPresenter")}
+            </Link>
+          </div>
           <div className="flex flex-wrap items-center gap-3">
             {!round.isFinal ? (
               <>

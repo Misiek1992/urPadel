@@ -1,7 +1,13 @@
 // urPadel brand mark: a perforated padel racket with a ball, in the club's
 // volt-on-navy palette. Server-safe (pure SVG, no client hooks).
 
-export function PadelMark({ size = 36 }: { size?: number }) {
+export function PadelMark({
+  size = 36,
+  className,
+}: {
+  size?: number;
+  className?: string;
+}) {
   return (
     <svg
       width={size}
@@ -10,6 +16,7 @@ export function PadelMark({ size = 36 }: { size?: number }) {
       fill="none"
       xmlns="http://www.w3.org/2000/svg"
       aria-hidden="true"
+      className={className}
     >
       <defs>
         <linearGradient id="upl-racket" x1="0" y1="0" x2="1" y2="1">

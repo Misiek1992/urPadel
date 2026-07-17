@@ -25,7 +25,7 @@ export function ScoreForm({
   matchPoints: number;
   initialScoreA?: number | null;
   initialScoreB?: number | null;
-  size?: "md" | "lg";
+  size?: "md" | "lg" | "xl";
   onSaved?: () => void;
 }) {
   const router = useRouter();
@@ -82,10 +82,11 @@ export function ScoreForm({
     }
   }
 
-  const big = size === "lg";
+  const xl = size === "xl";
+  const big = size === "lg" || xl;
   return (
     <form onSubmit={submit} className="w-full">
-      <div className="flex items-center justify-center gap-2">
+      <div className={cn("flex items-center justify-center", xl ? "gap-4" : "gap-2")}>
         <Input
           type="number"
           inputMode="numeric"
@@ -96,10 +97,19 @@ export function ScoreForm({
           aria-label="Side A score"
           className={cn(
             "text-center font-bold",
-            big ? "h-16 w-24 text-3xl" : "w-16"
+            xl
+              ? "h-24 w-28 border-2 border-white/25 bg-white/10 text-5xl focus:border-volt-400"
+              : big
+                ? "h-16 w-24 text-3xl"
+                : "w-16"
           )}
         />
-        <span className={cn("font-bold text-slate-500", big ? "text-2xl" : "text-sm")}>
+        <span
+          className={cn(
+            "font-bold text-slate-500",
+            xl ? "text-4xl" : big ? "text-2xl" : "text-sm"
+          )}
+        >
           :
         </span>
         <Input
@@ -115,20 +125,29 @@ export function ScoreForm({
           aria-label="Side B score"
           className={cn(
             "text-center font-bold",
-            big ? "h-16 w-24 text-3xl" : "w-16"
+            xl
+              ? "h-24 w-28 border-2 border-white/25 bg-white/10 text-5xl focus:border-volt-400"
+              : big
+                ? "h-16 w-24 text-3xl"
+                : "w-16"
           )}
         />
         <Button
           type="submit"
           disabled={saving}
           size={big ? "lg" : "sm"}
-          className="ml-2"
+          className={cn(xl ? "ml-4" : "ml-2")}
         >
-          {saving && <Spinner className="h-3.5 w-3.5" />}
+          {saving && <Spinner className={xl ? "h-5 w-5" : "h-3.5 w-3.5"} />}
           {t("scoreForm.save")}
         </Button>
       </div>
-      <p className={cn("mt-1.5 text-center text-slate-500", big ? "text-sm" : "text-xs")}>
+      <p
+        className={cn(
+          "mt-1.5 text-center text-slate-500",
+          xl ? "text-base" : big ? "text-sm" : "text-xs"
+        )}
+      >
         {t("scoreForm.hint", { points: matchPoints })}
       </p>
       <ErrorText>{error}</ErrorText>

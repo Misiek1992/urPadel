@@ -347,6 +347,9 @@ const pl: Dictionary = {
   },
   control: {
     publicView: "Widok publiczny",
+    openPresenter: "🖥️ Otwórz pełnoekranowy widok kortów",
+    presenterHint:
+      "Prowadź całą rundę z jednego dużego ekranu — korty, wyniki i sterowanie rundami.",
     startRound: "Rozpocznij rundę {number} →",
     playFinal: "🏁 Zagraj rundę FINAŁOWĄ (1. i 2. vs 3. i 4.)",
     finalInPlay: "Trwa runda finałowa — zamknij turniej, gdy wszystkie wyniki będą wpisane.",
@@ -507,6 +510,18 @@ const pl: Dictionary = {
     label: "Język",
     english: "English",
     polish: "Polski",
+  },
+  present: {
+    badge: "Widok kortów na żywo",
+    liveIndicator: "Na żywo",
+    rankingButton: "Ranking",
+    rankingTitle: "Aktualny ranking",
+    fullscreen: "Pełny ekran",
+    exitFullscreen: "Zamknij pełny ekran",
+    exit: "Wyjdź",
+    backToControl: "← Wróć do panelu",
+    finishedSubtitle:
+      "Świetny turniej! Sprawdź wyniki końcowe albo wróć do panelu sterowania.",
   },
   formats: {
     americanoLabel: "Americano",

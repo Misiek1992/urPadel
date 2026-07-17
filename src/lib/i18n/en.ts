@@ -341,6 +341,9 @@ const en = {
   },
   control: {
     publicView: "Public view",
+    openPresenter: "🖥️ Open fullscreen court view",
+    presenterHint:
+      "Run the whole round from one big screen — courts, scores and round controls.",
     startRound: "Start round {number} →",
     playFinal: "🏁 Play FINAL round (1st & 2nd vs 3rd & 4th)",
     finalInPlay:
@@ -509,6 +512,18 @@ const en = {
     label: "Language",
     english: "English",
     polish: "Polski",
+  },
+  present: {
+    badge: "Live court view",
+    liveIndicator: "Live",
+    rankingButton: "Ranking",
+    rankingTitle: "Live ranking",
+    fullscreen: "Fullscreen",
+    exitFullscreen: "Exit fullscreen",
+    exit: "Exit",
+    backToControl: "← Back to control",
+    finishedSubtitle:
+      "Great tournament! Check the final results or head back to the control panel.",
   },
   formats: {
     americanoLabel: "Americano",

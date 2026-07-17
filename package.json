@@ -3,7 +3,7 @@
   "version": "1.0.0",
   "private": true,
   "engines": {
-    "node": "20.x"
+    "node": "24.x"
   },
   "scripts": {
     "dev": "next dev",
@@ -15,7 +15,7 @@
   "dependencies": {
     "@clerk/nextjs": "^6.12.0",
     "mongoose": "^8.12.0",
-    "next": "15.3.3",
+    "next": "15.5.20",
     "react": "19.2.3",
     "react-dom": "19.2.3"
   },
@@ -28,5 +28,8 @@
     "tailwindcss": "^4.1.4",
     "tsx": "^4.19.2",
     "typescript": "^5.8.2"
+  },
+  "overrides": {
+    "postcss": "^8.5.10"
   }
 }

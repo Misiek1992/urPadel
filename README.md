@@ -41,8 +41,8 @@ npm run seed     # loads the demo club, 18 players, tournaments & rankings
 npm run dev      # http://localhost:3000
 ```
 
-Configuration lives in `.env.local` (Clerk keys, `MONGODB_URI`,
-`SUPERADMIN_EMAIL`).
+Configuration lives in `.env.local` — copy `.env.example` and fill in your
+own Clerk keys / `MONGODB_URI` / `SUPERADMIN_EMAIL`.
 
 ### Demo data
 
@@ -64,3 +64,54 @@ src/components/ design system (ui.tsx), Logo, slice components
 scripts/seed.ts demo data
 docs/CONTRACT.md internal API & behavior spec
 ```
+
+## Deploying to Vercel
+
+The app is zero-config for Vercel (standard Next.js App Router, all
+DB/auth-touching routes are `force-dynamic` so nothing hits MongoDB during
+the build). Steps:
+
+1. **Import the repo** in the Vercel dashboard (New Project → your GitHub
+   repo). Framework preset "Next.js" is auto-detected; no build command
+   overrides are needed.
+
+2. **Add environment variables** (Project Settings → Environment Variables).
+   Copy every key from [`.env.example`](.env.example) with your real values.
+   Add them to **Production**, **Preview** *and* **Development** environments
+   unless you intentionally want per-environment values (e.g. a separate
+   staging Mongo database via a different `MONGODB_URI`/`MONGODB_DB`).
+   - `NEXT_PUBLIC_*` vars are baked into the client bundle at build time —
+     if you change them, redeploy.
+   - Set `NEXT_PUBLIC_SITE_URL` to your final Vercel domain (e.g.
+     `https://urpadel.vercel.app` or your custom domain) once you know it —
+     it's only used for page metadata, so it's safe to redeploy later.
+
+3. **MongoDB Atlas network access**: Vercel's serverless functions run from
+   dynamic IPs, so under Atlas → Network Access, add `0.0.0.0/0` ("Allow
+   access from anywhere") — or, for tighter security, use Vercel's
+   [Secure Compute](https://vercel.com/docs/secure-compute) / a static
+   outbound IP add-on and allow-list that instead.
+
+4. **Clerk**: the bundled keys are **test-mode** keys tied to Clerk's
+   development instance and its default allowed origins. For a real
+   production domain, create a production Clerk instance (Clerk dashboard →
+   switch to Production) and use its `pk_live_…` / `sk_live_…` keys instead,
+   then add your Vercel domain under Clerk → Domains. Test keys will still
+   work for a quick preview deploy, but expect Clerk to warn about it.
+
+5. **Deploy.** Vercel builds with `npm run build` and serves every page as a
+   serverless function (all pages are dynamic, so there's no static/ISR
+   caching to worry about).
+
+6. **Seed data (optional, one-time)**: the seed script targets whatever
+   `MONGODB_URI` is in your environment, so to populate the *production*
+   database, run it locally against those production credentials:
+   ```bash
+   MONGODB_URI="<production-uri>" MONGODB_DB="urpadel" npm run seed
+   ```
+   ⚠️ This wipes and replaces all data in that database — never run it
+   against a database with real club data you want to keep.
+
+No `vercel.json` is required. `next.config.ts` already marks `mongoose` as a
+server-external package so it isn't bundled by webpack, and `package.json`
+pins `"engines": { "node": "20.x" }` to match Vercel's default Node runtime.

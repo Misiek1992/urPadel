@@ -7,13 +7,9 @@ import { dbConnect } from "./db";
 import { ClubPlayer, RankingEntry } from "./models";
 import { computeStandings, type Entrant, type EngineRound } from "./engine";
 import type { RankingEntryJSON, RankingRowJSON } from "./types";
+import { pointsForPosition, RANKING_WINDOW_DAYS } from "./ranking-points";
 
-export const RANKING_WINDOW_DAYS = 365;
-
-export function pointsForPosition(position: number): number {
-  if (position >= 1 && position <= 10) return 110 - position * 10;
-  return 1;
-}
+export { pointsForPosition, RANKING_WINDOW_DAYS };
 
 interface TournamentLike {
   _id: unknown;

@@ -7,6 +7,7 @@
 import { useRouter } from "next/navigation";
 import { useState, type FormEvent } from "react";
 import { Button, ErrorText, Input, Spinner, cn } from "@/components/ui";
+import { useT } from "@/components/i18n/LocaleProvider";
 
 export function ScoreForm({
   tournamentId,
@@ -28,6 +29,7 @@ export function ScoreForm({
   onSaved?: () => void;
 }) {
   const router = useRouter();
+  const t = useT();
   const [scoreA, setScoreA] = useState(
     initialScoreA != null ? String(initialScoreA) : ""
   );
@@ -51,11 +53,11 @@ export function ScoreForm({
     const a = Number(scoreA);
     const b = Number(scoreB);
     if (!Number.isInteger(a) || !Number.isInteger(b) || a < 0 || b < 0) {
-      setError("Enter whole numbers of 0 or more.");
+      setError(t("scoreForm.invalidNumbers"));
       return;
     }
     if (a + b !== matchPoints) {
-      setError(`Scores must add up to ${matchPoints} (currently ${a + b}).`);
+      setError(t("scoreForm.sumMismatch", { points: matchPoints, sum: a + b }));
       return;
     }
     setSaving(true);
@@ -68,13 +70,13 @@ export function ScoreForm({
       });
       if (!res.ok) {
         const data = (await res.json().catch(() => null)) as { error?: string } | null;
-        setError(data?.error ?? `Request failed (${res.status})`);
+        setError(data?.error ?? t("common.requestFailed", { status: res.status }));
         return;
       }
       onSaved?.();
       router.refresh();
     } catch {
-      setError("Network error — please try again.");
+      setError(t("scoreForm.networkError"));
     } finally {
       setSaving(false);
     }
@@ -123,11 +125,11 @@ export function ScoreForm({
           className="ml-2"
         >
           {saving && <Spinner className="h-3.5 w-3.5" />}
-          Save
+          {t("scoreForm.save")}
         </Button>
       </div>
       <p className={cn("mt-1.5 text-center text-slate-500", big ? "text-sm" : "text-xs")}>
-        Rally points — must add up to {matchPoints}
+        {t("scoreForm.hint", { points: matchPoints })}
       </p>
       <ErrorText>{error}</ErrorText>
     </form>

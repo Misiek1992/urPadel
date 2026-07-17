@@ -3,16 +3,19 @@
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { cn } from "@/components/ui";
-
-const TABS = [
-  { href: "/superadmin", label: "Overview" },
-  { href: "/superadmin/clubs", label: "Clubs" },
-  { href: "/superadmin/admins", label: "Admins" },
-  { href: "/superadmin/logs", label: "Activity log" },
-] as const;
+import { useT } from "@/components/i18n/LocaleProvider";
 
 export function SuperAdminNav() {
   const pathname = usePathname();
+  const t = useT();
+
+  const TABS = [
+    { href: "/superadmin", label: t("superadminNav.overview") },
+    { href: "/superadmin/clubs", label: t("superadminNav.clubs") },
+    { href: "/superadmin/admins", label: t("superadminNav.admins") },
+    { href: "/superadmin/logs", label: t("superadminNav.logs") },
+  ] as const;
+
   return (
     <nav
       aria-label="Super admin sections"

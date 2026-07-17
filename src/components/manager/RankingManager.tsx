@@ -23,15 +23,16 @@ import type {
   RankingEntryJSON,
   RankingRowJSON,
 } from "@/lib/types";
+import { useT } from "@/components/i18n/LocaleProvider";
 
-async function readApiError(res: Response): Promise<string> {
+async function readApiError(res: Response, fallback: string): Promise<string> {
   try {
     const data = (await res.json()) as { error?: unknown };
     if (typeof data?.error === "string" && data.error) return data.error;
   } catch {
     // fall through
   }
-  return `Request failed (${res.status})`;
+  return fallback;
 }
 
 const MEDALS = ["🥇", "🥈", "🥉"];
@@ -46,6 +47,7 @@ export function RankingManager({
   roster: ClubPlayerJSON[];
 }) {
   const router = useRouter();
+  const t = useT();
   const [expanded, setExpanded] = useState<string | null>(null);
 
   // Adjustment form
@@ -72,11 +74,11 @@ export function RankingManager({
     const playerName = adjPlayer === "__custom__" ? adjCustom.trim() : adjPlayer;
     const points = Number(adjPoints);
     if (!playerName) {
-      setAdjError("Pick or enter a player name.");
+      setAdjError(t("managerRanking.choosePlayerError"));
       return;
     }
     if (!Number.isInteger(points) || points === 0) {
-      setAdjError("Points must be a non-zero whole number (negatives allowed).");
+      setAdjError(t("managerRanking.pointsError"));
       return;
     }
     setAdjBusy(true);
@@ -93,11 +95,15 @@ export function RankingManager({
         }),
       });
       if (!res.ok) {
-        setAdjError(await readApiError(res));
+        setAdjError(await readApiError(res, t("common.requestFailed", { status: res.status })));
         return;
       }
       setAdjDone(
-        `Adjusted ${playerName} by ${points > 0 ? "+" : ""}${points} points.`
+        t("managerRanking.adjustmentDone", {
+          player: playerName,
+          sign: points > 0 ? "+" : "",
+          points,
+        })
       );
       setAdjPlayer("");
       setAdjCustom("");
@@ -105,7 +111,7 @@ export function RankingManager({
       setAdjNote("");
       router.refresh();
     } catch {
-      setAdjError("Network error — please try again.");
+      setAdjError(t("common.networkError"));
     } finally {
       setAdjBusy(false);
     }
@@ -122,7 +128,7 @@ export function RankingManager({
     if (!editEntry) return;
     const points = Number(editPoints);
     if (!Number.isInteger(points)) {
-      setEditError("Points must be a whole number.");
+      setEditError(t("managerRanking.pointsWholeError"));
       return;
     }
     setEditBusy(true);
@@ -134,13 +140,13 @@ export function RankingManager({
         body: JSON.stringify({ points, note: editNote.trim() }),
       });
       if (!res.ok) {
-        setEditError(await readApiError(res));
+        setEditError(await readApiError(res, t("common.requestFailed", { status: res.status })));
         return;
       }
       setEditEntry(null);
       router.refresh();
     } catch {
-      setEditError("Network error — please try again.");
+      setEditError(t("common.networkError"));
     } finally {
       setEditBusy(false);
     }
@@ -155,13 +161,13 @@ export function RankingManager({
         method: "DELETE",
       });
       if (!res.ok) {
-        setDeleteError(await readApiError(res));
+        setDeleteError(await readApiError(res, t("common.requestFailed", { status: res.status })));
         return;
       }
       setDeleteEntry(null);
       router.refresh();
     } catch {
-      setDeleteError("Network error — please try again.");
+      setDeleteError(t("common.networkError"));
     } finally {
       setDeleteBusy(false);
     }
@@ -172,18 +178,18 @@ export function RankingManager({
       <div>
         {rows.length === 0 ? (
           <EmptyState
-            title="No ranking points yet"
-            hint="Close a tournament (or add a manual adjustment) and the ranking appears here."
+            title={t("managerRanking.noRankingTitle")}
+            hint={t("managerRanking.noRankingHint")}
           />
         ) : (
           <div className="table-wrap">
             <table className="table-base">
               <thead>
                 <tr>
-                  <th className="w-12">#</th>
-                  <th>Player</th>
-                  <th className="text-right">Points</th>
-                  <th className="text-right">Tournaments</th>
+                  <th className="w-12">{t("managerRanking.position")}</th>
+                  <th>{t("managerRanking.player")}</th>
+                  <th className="text-right">{t("managerRanking.points")}</th>
+                  <th className="text-right">{t("managerRanking.tournaments")}</th>
                   <th className="w-24"></th>
                 </tr>
               </thead>
@@ -223,7 +229,7 @@ export function RankingManager({
                           size="sm"
                           onClick={() => setExpanded(isOpen ? null : key)}
                         >
-                          {isOpen ? "Hide" : "Entries"}
+                          {isOpen ? t("common.hide") : t("managerRanking.entries")}
                         </Button>
                       </td>
                     </tr>,
@@ -250,7 +256,7 @@ export function RankingManager({
                                     ? `${entry.position ? `#${entry.position} · ` : ""}${
                                         entry.tournamentName ?? "Tournament"
                                       }`
-                                    : "Manual adjustment"}
+                                    : t("managerRanking.manualAdjustment")}
                                 </Badge>
                                 {entry.note && (
                                   <span className="text-xs italic text-slate-400">
@@ -273,7 +279,7 @@ export function RankingManager({
                                     size="sm"
                                     onClick={() => openEdit(entry)}
                                   >
-                                    Edit
+                                    {t("common.edit")}
                                   </Button>
                                   <Button
                                     variant="ghost"
@@ -284,7 +290,7 @@ export function RankingManager({
                                       setDeleteEntry(entry);
                                     }}
                                   >
-                                    Delete
+                                    {t("common.delete")}
                                   </Button>
                                 </span>
                               </div>
@@ -303,55 +309,55 @@ export function RankingManager({
 
       <div>
         <Card>
-          <h3 className="section-title">Add adjustment</h3>
+          <h3 className="section-title">{t("managerRanking.addAdjustmentTitle")}</h3>
           <p className="mt-1 text-sm text-slate-400">
-            Manually grant or remove points — bonuses, corrections, penalties.
+            {t("managerRanking.addAdjustmentHint")}
           </p>
           <form onSubmit={submitAdjustment} className="mt-4 space-y-3">
             <div>
-              <label className="label">Player</label>
+              <label className="label">{t("managerRanking.playerLabel")}</label>
               <Select
                 value={adjPlayer}
                 onChange={(e) => setAdjPlayer(e.target.value)}
               >
-                <option value="">Choose a player…</option>
+                <option value="">{t("managerRanking.choosePlayer")}</option>
                 {roster.map((p) => (
                   <option key={p._id} value={p.name}>
                     {p.name}
                   </option>
                 ))}
-                <option value="__custom__">Other (type a name)</option>
+                <option value="__custom__">{t("managerRanking.otherCustom")}</option>
               </Select>
             </div>
             {adjPlayer === "__custom__" && (
               <Input
                 value={adjCustom}
                 onChange={(e) => setAdjCustom(e.target.value)}
-                placeholder="Player name"
-                aria-label="Custom player name"
+                placeholder={t("managerRanking.customNamePlaceholder")}
+                aria-label={t("managerRanking.customNamePlaceholder")}
               />
             )}
             <div>
-              <label className="label">Points (± allowed)</label>
+              <label className="label">{t("managerRanking.pointsLabel")}</label>
               <Input
                 type="number"
                 value={adjPoints}
                 onChange={(e) => setAdjPoints(e.target.value)}
-                placeholder="e.g. 25 or -10"
+                placeholder={t("managerRanking.pointsPlaceholder")}
               />
             </div>
             <div>
-              <label className="label">Note</label>
+              <label className="label">{t("managerRanking.noteLabel")}</label>
               <Textarea
                 value={adjNote}
                 onChange={(e) => setAdjNote(e.target.value)}
                 rows={2}
-                placeholder="Why? (shown in the entry list)"
+                placeholder={t("managerRanking.notePlaceholder")}
               />
             </div>
             <Button type="submit" disabled={adjBusy} className="w-full">
               {adjBusy && <Spinner className="h-3.5 w-3.5" />}
-              Add adjustment
+              {t("managerRanking.addAdjustmentBtn")}
             </Button>
             <ErrorText>{adjError}</ErrorText>
             {adjDone && (
@@ -364,7 +370,7 @@ export function RankingManager({
       <Modal
         open={editEntry !== null}
         onClose={() => !editBusy && setEditEntry(null)}
-        title={`Edit entry — ${editEntry?.playerName}`}
+        title={t("managerRanking.editEntryTitle", { player: editEntry?.playerName ?? "" })}
         footer={
           <>
             <Button
@@ -372,11 +378,11 @@ export function RankingManager({
               onClick={() => setEditEntry(null)}
               disabled={editBusy}
             >
-              Cancel
+              {t("common.cancel")}
             </Button>
             <Button onClick={saveEdit} disabled={editBusy}>
               {editBusy && <Spinner className="h-3.5 w-3.5" />}
-              Save
+              {t("common.save")}
             </Button>
           </>
         }
@@ -384,13 +390,16 @@ export function RankingManager({
         <div className="space-y-3">
           <p className="text-xs text-slate-400">
             {editEntry?.kind === "tournament"
-              ? `Awarded for ${editEntry.tournamentName ?? "a tournament"}${
-                  editEntry.position ? ` (position ${editEntry.position})` : ""
-                }.`
-              : "Manual adjustment."}
+              ? t("managerRanking.awardedFor", {
+                  tournament: editEntry.tournamentName ?? "",
+                  position: editEntry.position
+                    ? t("managerRanking.positionSuffix", { position: editEntry.position })
+                    : "",
+                })
+              : t("managerRanking.manualAdjustment")}
           </p>
           <div>
-            <label className="label">Points</label>
+            <label className="label">{t("managerRanking.editPoints")}</label>
             <Input
               type="number"
               value={editPoints}
@@ -398,11 +407,11 @@ export function RankingManager({
             />
           </div>
           <div>
-            <label className="label">Note</label>
+            <label className="label">{t("managerRanking.editNote")}</label>
             <Input
               value={editNote}
               onChange={(e) => setEditNote(e.target.value)}
-              placeholder="Optional"
+              placeholder={t("common.optional")}
             />
           </div>
           <ErrorText>{editError}</ErrorText>
@@ -412,7 +421,7 @@ export function RankingManager({
       <Modal
         open={deleteEntry !== null}
         onClose={() => !deleteBusy && setDeleteEntry(null)}
-        title="Delete ranking entry?"
+        title={t("managerRanking.deleteEntryTitle")}
         footer={
           <>
             <Button
@@ -420,25 +429,21 @@ export function RankingManager({
               onClick={() => setDeleteEntry(null)}
               disabled={deleteBusy}
             >
-              Cancel
+              {t("common.cancel")}
             </Button>
             <Button variant="danger" onClick={confirmDelete} disabled={deleteBusy}>
               {deleteBusy && <Spinner className="h-3.5 w-3.5" />}
-              Delete entry
+              {t("managerRanking.deleteEntry")}
             </Button>
           </>
         }
       >
         <p className="text-sm text-slate-300">
-          Removes{" "}
-          <span className="font-semibold text-white">
-            {deleteEntry && (deleteEntry.points > 0 ? "+" : "")}
-            {deleteEntry?.points} points
-          </span>{" "}
-          for{" "}
-          <span className="font-semibold text-white">{deleteEntry?.playerName}</span>
-          {deleteEntry?.tournamentName ? ` (${deleteEntry.tournamentName})` : ""}. The
-          ranking recalculates immediately.
+          {t("managerRanking.deleteEntryHint", {
+            points: deleteEntry ? (deleteEntry.points > 0 ? "+" : "") + deleteEntry.points : "",
+            player: deleteEntry?.playerName ?? "",
+            tournament: deleteEntry?.tournamentName ? ` (${deleteEntry.tournamentName})` : "",
+          })}
         </p>
         <ErrorText>{deleteError}</ErrorText>
       </Modal>

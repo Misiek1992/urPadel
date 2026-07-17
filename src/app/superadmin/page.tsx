@@ -10,6 +10,8 @@ import {
 } from "@/lib/models";
 import { RANKING_WINDOW_DAYS } from "@/lib/ranking";
 import { serialize, type AuditLogJSON } from "@/lib/types";
+import { createT } from "@/lib/i18n";
+import { getLocale } from "@/lib/i18n/server";
 import { StatCard } from "@/components/ui";
 import { ActionBadge } from "@/components/superadmin/ActionBadge";
 import { SuperAdminDenied } from "@/components/superadmin/AccessGate";
@@ -18,8 +20,9 @@ export const dynamic = "force-dynamic";
 
 export default async function SuperAdminOverviewPage() {
   const viewer = await getViewer();
+  const t = createT(await getLocale());
   if (!viewer.isSuperAdmin) {
-    return <SuperAdminDenied email={viewer.email} />;
+    return <SuperAdminDenied email={viewer.email} t={t} />;
   }
 
   await dbConnect();
@@ -45,50 +48,58 @@ export default async function SuperAdminOverviewPage() {
     <div>
       <div className="mb-6 flex flex-wrap items-end justify-between gap-4">
         <div>
-          <h2 className="section-title">Overview</h2>
+          <h2 className="section-title">{t("superadminOverview.title")}</h2>
           <p className="mt-1 text-sm text-slate-400">
-            Everything across urPadel at a glance.
+            {t("superadminOverview.subtitle")}
           </p>
         </div>
         <Link href="/superadmin/clubs" className="btn btn-primary btn-sm">
-          Create a club
+          {t("superadminOverview.createClub")}
         </Link>
       </div>
 
       <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
-        <StatCard label="Clubs" value={clubCount} hint="on the platform" />
         <StatCard
-          label="Tournaments"
+          label={t("superadminOverview.clubs")}
+          value={clubCount}
+          hint={t("superadminOverview.clubsHint")}
+        />
+        <StatCard
+          label={t("superadminOverview.tournaments")}
           value={activeTournaments + finishedTournaments}
-          hint={`${activeTournaments} active · ${finishedTournaments} finished`}
+          hint={t("superadminOverview.tournamentsHint", {
+            active: activeTournaments,
+            finished: finishedTournaments,
+          })}
         />
         <StatCard
-          label="Roster players"
+          label={t("superadminOverview.players")}
           value={playerCount}
-          hint="across all clubs"
+          hint={t("superadminOverview.playersHint")}
         />
         <StatCard
-          label="Ranking entries"
+          label={t("superadminOverview.rankingEntries")}
           value={rankingEntryCount}
-          hint={`last ${RANKING_WINDOW_DAYS} days`}
+          hint={t("superadminOverview.rankingEntriesHint", {
+            days: RANKING_WINDOW_DAYS,
+          })}
         />
       </div>
 
       <section className="mt-8">
         <div className="mb-3 flex flex-wrap items-center justify-between gap-2">
-          <h3 className="section-title">Recent activity</h3>
+          <h3 className="section-title">{t("superadminOverview.recentActivity")}</h3>
           <Link
             href="/superadmin/logs"
             className="text-sm font-semibold text-volt-300 hover:text-volt-400"
           >
-            View full log →
+            {t("superadminOverview.viewFullLog")}
           </Link>
         </div>
         <div className="card divide-y divide-white/5">
           {recentLogs.length === 0 ? (
             <p className="px-5 py-10 text-center text-sm text-slate-400">
-              No activity recorded yet — every mutation across the app will show
-              up here.
+              {t("superadminOverview.noActivity")}
             </p>
           ) : (
             recentLogs.map((log) => (

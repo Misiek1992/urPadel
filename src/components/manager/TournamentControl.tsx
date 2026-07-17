@@ -15,17 +15,19 @@ import {
   cn,
 } from "@/components/ui";
 import type { EntrantJSON, TournamentJSON } from "@/lib/types";
+import { pointsForPosition } from "@/lib/ranking-points";
 import { ScoreForm } from "@/components/public/ScoreForm";
 import { Collapsible } from "@/components/public/Collapsible";
+import { useLocale, useT } from "@/components/i18n/LocaleProvider";
 
-async function readApiError(res: Response): Promise<string> {
+async function readApiError(res: Response, fallback: string): Promise<string> {
   try {
     const data = (await res.json()) as { error?: unknown };
     if (typeof data?.error === "string" && data.error) return data.error;
   } catch {
     // fall through
   }
-  return `Request failed (${res.status})`;
+  return fallback;
 }
 
 function names(ids: string[], map: Record<string, EntrantJSON>): string[] {
@@ -39,6 +41,12 @@ function names(ids: string[], map: Record<string, EntrantJSON>): string[] {
   return out;
 }
 
+/** Simplified two-way plural: exact singular vs. a shared "other" form. */
+function pluralSuffix(count: number, locale: "en" | "pl", en: string, pl: string): string {
+  if (count === 1) return "";
+  return locale === "pl" ? pl : en;
+}
+
 export function TournamentControl({
   tournament,
   clubId,
@@ -47,6 +55,8 @@ export function TournamentControl({
   clubId: string;
 }) {
   const router = useRouter();
+  const t = useT();
+  const locale = useLocale();
   const map: Record<string, EntrantJSON> = {};
   for (const e of tournament.entrants) map[e.id] = e;
 
@@ -77,12 +87,12 @@ export function TournamentControl({
         body: JSON.stringify({ final }),
       });
       if (!res.ok) {
-        setAdvanceError(await readApiError(res));
+        setAdvanceError(await readApiError(res, t("common.requestFailed", { status: res.status })));
         return;
       }
       router.refresh();
     } catch {
-      setAdvanceError("Network error — please try again.");
+      setAdvanceError(t("common.networkError"));
     } finally {
       setAdvancing(null);
     }
@@ -96,13 +106,13 @@ export function TournamentControl({
         method: "POST",
       });
       if (!res.ok) {
-        setCloseError(await readApiError(res));
+        setCloseError(await readApiError(res, t("common.requestFailed", { status: res.status })));
         return;
       }
       setCloseOpen(false);
       router.refresh();
     } catch {
-      setCloseError("Network error — please try again.");
+      setCloseError(t("common.networkError"));
     } finally {
       setClosing(false);
     }
@@ -116,15 +126,17 @@ export function TournamentControl({
         method: "DELETE",
       });
       if (!res.ok) {
-        setDeleteError(await readApiError(res));
+        setDeleteError(await readApiError(res, t("common.requestFailed", { status: res.status })));
         return;
       }
       router.push(`/manager?club=${clubId}`);
     } catch {
-      setDeleteError("Network error — please try again.");
+      setDeleteError(t("common.networkError"));
       setDeleting(false);
     }
   }
+
+  const missingCount = round?.matches.filter((m) => m.scoreA == null).length ?? 0;
 
   return (
     <div className="space-y-8">
@@ -139,7 +151,7 @@ export function TournamentControl({
                   disabled={!allScored || advancing !== null}
                 >
                   {advancing === "next" && <Spinner className="h-3.5 w-3.5" />}
-                  Start round {round.number + 1} →
+                  {t("control.startRound", { number: round.number + 1 })}
                 </Button>
                 <Button
                   variant="secondary"
@@ -147,12 +159,12 @@ export function TournamentControl({
                   disabled={!allScored || advancing !== null}
                 >
                   {advancing === "final" && <Spinner className="h-3.5 w-3.5" />}
-                  🏁 Play FINAL round (1st & 2nd vs 3rd & 4th)
+                  {t("control.playFinal")}
                 </Button>
               </>
             ) : (
               <p className="text-sm font-semibold text-volt-300">
-                Final round in play — close the tournament when all scores are in.
+                {t("control.finalInPlay")}
               </p>
             )}
             <Button
@@ -163,15 +175,16 @@ export function TournamentControl({
                 setCloseOpen(true);
               }}
             >
-              Close tournament
+              {t("control.closeTournament")}
             </Button>
           </div>
           {!allScored && !round.isFinal && (
             <p className="mt-2 text-xs text-slate-500">
-              Waiting for{" "}
-              {round.matches.filter((m) => m.scoreA == null).length} more result
-              {round.matches.filter((m) => m.scoreA == null).length === 1 ? "" : "s"}{" "}
-              in round {round.number} before the next round can start.
+              {t("control.waitingFor", {
+                count: missingCount,
+                plural: pluralSuffix(missingCount, locale, "s", "y"),
+                round: round.number,
+              })}
             </p>
           )}
           <ErrorText>{advanceError}</ErrorText>
@@ -183,15 +196,15 @@ export function TournamentControl({
         <section>
           <div className="mb-4 flex flex-wrap items-center gap-3">
             <h2 className="section-title">
-              Round {round.number}
+              {t("control.round", { number: round.number })}
               {round.isFinal && (
                 <Badge tone="volt" className="ml-2 align-middle">
-                  FINAL — seeded by ranking
+                  {t("control.finalBadge")}
                 </Badge>
               )}
             </h2>
             <span className="text-xs text-slate-500">
-              Court screens:{" "}
+              {t("control.courtScreens")}{" "}
               {tournament.courts.map((c, i) => (
                 <span key={c}>
                   {i > 0 && " · "}
@@ -215,7 +228,7 @@ export function TournamentControl({
                     <h3 className="text-sm font-extrabold uppercase tracking-wide text-volt-300">
                       {match.court}
                     </h3>
-                    {done && <Badge tone="volt">Played</Badge>}
+                    {done && <Badge tone="volt">{t("control.played")}</Badge>}
                   </div>
                   <div className="mt-3 grid grid-cols-[1fr_auto_1fr] items-center gap-3 text-sm">
                     <div className="text-right">
@@ -253,7 +266,7 @@ export function TournamentControl({
           </div>
           {round.byes.length > 0 && (
             <p className="mt-4 text-sm text-slate-400">
-              <span className="badge badge-slate mr-2">Resting</span>
+              <span className="badge badge-slate mr-2">{t("control.resting")}</span>
               {round.byes.map((id) => map[id]?.name ?? id).join(", ")}
             </p>
           )}
@@ -264,21 +277,23 @@ export function TournamentControl({
       {pastRounds.length > 0 && (
         <section>
           <h2 className="section-title mb-4">
-            {isActive ? "Previous rounds" : "All rounds"}
+            {isActive ? t("control.previousRounds") : t("control.allRounds")}
             <span className="ml-2 align-middle text-xs font-normal text-slate-500">
-              {isActive
-                ? "managers can correct any result"
-                : "finished — results are locked"}
+              {isActive ? t("control.previousHint") : t("control.lockedHint")}
             </span>
           </h2>
           <div className="space-y-3">
             {[...pastRounds].reverse().map((r) => (
               <Collapsible
                 key={r.number}
-                title={`Round ${r.number}${r.isFinal ? " — FINAL" : ""}`}
+                title={
+                  r.isFinal
+                    ? `${t("control.round", { number: r.number })} — ${t("control.finalBadge")}`
+                    : t("control.round", { number: r.number })
+                }
                 meta={
                   <span className="text-xs text-slate-500">
-                    {r.matches.length} matches
+                    {r.matches.length}
                   </span>
                 }
               >
@@ -313,7 +328,7 @@ export function TournamentControl({
                                 setEditingPast(isEditing ? null : editKey)
                               }
                             >
-                              {isEditing ? "Cancel" : "Edit"}
+                              {isEditing ? t("control.cancel") : t("control.edit")}
                             </Button>
                           )}
                         </div>
@@ -335,7 +350,9 @@ export function TournamentControl({
                   })}
                   {r.byes.length > 0 && (
                     <p className="text-xs text-slate-500">
-                      Resting: {r.byes.map((id) => map[id]?.name ?? id).join(", ")}
+                      {t("control.restingList", {
+                        names: r.byes.map((id) => map[id]?.name ?? id).join(", "),
+                      })}
                     </p>
                   )}
                 </div>
@@ -347,13 +364,12 @@ export function TournamentControl({
 
       {/* Danger zone */}
       <section className="card card-pad border-red-500/20">
-        <h2 className="text-sm font-bold text-red-300">Danger zone</h2>
+        <h2 className="text-sm font-bold text-red-300">{t("control.dangerZoneTitle")}</h2>
         <div className="mt-3 flex flex-wrap items-center gap-3">
           <p className="text-sm text-slate-400">
-            Delete this tournament{" "}
             {tournament.pointsAwarded
-              ? "and take back the ranking points it awarded."
-              : "— no ranking points have been awarded yet."}
+              ? t("control.dangerZoneHintAwarded")
+              : t("control.dangerZoneHintNotAwarded")}
           </p>
           <Button
             variant="danger"
@@ -365,7 +381,7 @@ export function TournamentControl({
               setDeleteOpen(true);
             }}
           >
-            Delete tournament
+            {t("control.deleteTournament")}
           </Button>
         </div>
       </section>
@@ -374,7 +390,7 @@ export function TournamentControl({
       <Modal
         open={closeOpen}
         onClose={() => !closing && setCloseOpen(false)}
-        title="Close the tournament?"
+        title={t("control.closeModalTitle")}
         footer={
           <>
             <Button
@@ -382,27 +398,26 @@ export function TournamentControl({
               onClick={() => setCloseOpen(false)}
               disabled={closing}
             >
-              Keep playing
+              {t("control.keepPlaying")}
             </Button>
             <Button variant="danger" onClick={closeTournament} disabled={closing}>
               {closing && <Spinner className="h-3.5 w-3.5" />}
-              Close & award points
+              {t("control.closeAndAward")}
             </Button>
           </>
         }
       >
         <p className="text-sm text-slate-300">
-          Closing locks all results and awards club ranking points by final
-          position: <span className="font-bold text-volt-300">100</span> for 1st,{" "}
-          <span className="font-bold text-volt-300">90</span> for 2nd … {" "}
-          <span className="font-bold text-volt-300">10</span> for 10th, and{" "}
-          <span className="font-bold text-volt-300">1</span> participation point
-          for everyone else. Points count towards the ranking for one year.
+          {t("control.closeModalBody", {
+            gold: pointsForPosition(1),
+            silver: pointsForPosition(2),
+            bronze: pointsForPosition(10),
+            rest: pointsForPosition(11),
+          })}
         </p>
         {isActive && round && !allScored && (
           <p className="mt-3 text-sm font-medium text-amber-400">
-            Round {round.number} still has unentered results — those matches simply
-            won't count.
+            {t("control.closeModalWarning", { round: round.number })}
           </p>
         )}
         <ErrorText>{closeError}</ErrorText>
@@ -412,7 +427,7 @@ export function TournamentControl({
       <Modal
         open={deleteOpen}
         onClose={() => !deleting && setDeleteOpen(false)}
-        title={`Delete ${tournament.name}?`}
+        title={t("control.deleteModalTitle", { name: tournament.name })}
         footer={
           <>
             <Button
@@ -420,28 +435,28 @@ export function TournamentControl({
               onClick={() => setDeleteOpen(false)}
               disabled={deleting}
             >
-              Cancel
+              {t("common.cancel")}
             </Button>
             {!deleteArmed ? (
               <Button variant="danger" onClick={() => setDeleteArmed(true)}>
-                Yes, I want to delete it
+                {t("control.confirmDelete")}
               </Button>
             ) : (
               <Button variant="danger" onClick={deleteTournament} disabled={deleting}>
                 {deleting && <Spinner className="h-3.5 w-3.5" />}
-                Delete permanently
+                {t("control.deletePermanently")}
               </Button>
             )}
           </>
         }
       >
         <p className="text-sm text-slate-300">
-          All rounds and results of{" "}
-          <span className="font-semibold text-white">{tournament.name}</span> will
-          be permanently deleted
-          {tournament.pointsAwarded &&
-            ", and the ranking points it awarded will be removed"}
-          . This cannot be undone.
+          {t("control.deleteModalBody", {
+            name: tournament.name,
+            awarded: tournament.pointsAwarded
+              ? t("control.deleteModalAwardedSuffix")
+              : "",
+          })}
         </p>
         <ErrorText>{deleteError}</ErrorText>
       </Modal>

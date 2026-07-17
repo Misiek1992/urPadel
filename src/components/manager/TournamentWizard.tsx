@@ -20,23 +20,28 @@ import {
 import type { ClubPlayerJSON, TournamentJSON } from "@/lib/types";
 import {
   MATCH_POINTS_OPTIONS,
-  TOURNAMENT_TYPES,
   isTeamType,
-  typeLabel,
   validateTournamentSetup,
   type TournamentType,
 } from "@/lib/engine";
+import { formatLabel, formatOptions } from "@/lib/i18n/formats";
 import { parsePlayersText } from "@/lib/players-import";
+import { useLocale, useT } from "@/components/i18n/LocaleProvider";
+import type { Translator } from "@/lib/i18n";
 
-const STEPS = ["Format", "Basics", "Players", "Courts", "Start"] as const;
-
-function defaultName(type: TournamentType): string {
+function defaultName(t: Translator, type: TournamentType): string {
   const date = new Date().toLocaleDateString("en-GB", {
     day: "numeric",
     month: "short",
     year: "numeric",
   });
-  return `${typeLabel(type)} — ${date}`;
+  return `${formatLabel(t, type)} — ${date}`;
+}
+
+/** Simplified two-way plural: exact singular vs. a shared "other" form. */
+function pluralSuffix(count: number, locale: "en" | "pl", en: string, pl: string): string {
+  if (count === 1) return "";
+  return locale === "pl" ? pl : en;
 }
 
 export function TournamentWizard({
@@ -47,10 +52,20 @@ export function TournamentWizard({
   roster: ClubPlayerJSON[];
 }) {
   const router = useRouter();
+  const t = useT();
+  const locale = useLocale();
   const [step, setStep] = useState(0);
 
+  const STEPS = [
+    t("wizard.stepFormat"),
+    t("wizard.stepBasics"),
+    t("wizard.stepPlayers"),
+    t("wizard.stepCourts"),
+    t("wizard.stepStart"),
+  ];
+
   const [type, setType] = useState<TournamentType>("americano");
-  const [name, setName] = useState(defaultName("americano"));
+  const [name, setName] = useState(() => defaultName(t, "americano"));
   const [nameTouched, setNameTouched] = useState(false);
   const [matchPoints, setMatchPoints] = useState<number>(24);
   const [customPoints, setCustomPoints] = useState("");
@@ -173,12 +188,12 @@ export function TournamentWizard({
         | { tournament?: TournamentJSON; error?: string }
         | null;
       if (!res.ok || !data?.tournament) {
-        setSubmitError(data?.error ?? `Request failed (${res.status})`);
+        setSubmitError(data?.error ?? t("common.requestFailed", { status: res.status }));
         return;
       }
       router.push(`/manager/tournaments/${data.tournament._id}?club=${clubId}`);
     } catch {
-      setSubmitError("Network error — please try again.");
+      setSubmitError(t("common.networkError"));
     } finally {
       setSubmitting(false);
     }
@@ -194,6 +209,10 @@ export function TournamentWizard({
           : step === 3
             ? courts.length > 0
             : false;
+
+  const kindLabel = team
+    ? t("wizard.selectedPlayersKindTeams")
+    : t("wizard.selectedPlayersKindPlayers");
 
   return (
     <div className="mx-auto max-w-3xl">
@@ -227,27 +246,27 @@ export function TournamentWizard({
       {/* Step 1: format */}
       {step === 0 && (
         <div className="grid gap-4 sm:grid-cols-2">
-          {TOURNAMENT_TYPES.map((t) => (
+          {formatOptions(t).map((f) => (
             <button
-              key={t.value}
+              key={f.value}
               type="button"
               onClick={() => {
-                setType(t.value);
-                if (!nameTouched) setName(defaultName(t.value));
+                setType(f.value);
+                if (!nameTouched) setName(defaultName(t, f.value));
               }}
               className={cn(
                 "card card-pad text-left transition-colors",
-                type === t.value
+                type === f.value
                   ? "border-volt-400/70 bg-volt-400/[0.06]"
                   : "hover:border-white/25"
               )}
             >
               <div className="flex items-center justify-between">
-                <h3 className="text-lg font-bold text-white">{t.label}</h3>
-                {type === t.value && <Badge tone="volt">Selected</Badge>}
+                <h3 className="text-lg font-bold text-white">{f.label}</h3>
+                {type === f.value && <Badge tone="volt">{t("wizard.selected")}</Badge>}
               </div>
               <p className="mt-2 text-sm leading-relaxed text-slate-400">
-                {t.description}
+                {f.description}
               </p>
             </button>
           ))}
@@ -259,7 +278,7 @@ export function TournamentWizard({
         <Card>
           <div className="space-y-5">
             <div>
-              <label className="label">Tournament name</label>
+              <label className="label">{t("wizard.basicsNameLabel")}</label>
               <Input
                 value={name}
                 onChange={(e) => {
@@ -269,7 +288,7 @@ export function TournamentWizard({
               />
             </div>
             <div>
-              <label className="label">Points per match</label>
+              <label className="label">{t("wizard.basicsPointsLabel")}</label>
               <div className="flex flex-wrap items-center gap-2">
                 {MATCH_POINTS_OPTIONS.map((pts) => (
                   <button
@@ -299,16 +318,17 @@ export function TournamentWizard({
                     const v = Number(e.target.value);
                     if (Number.isInteger(v) && v >= 4 && v <= 128) setMatchPoints(v);
                   }}
-                  placeholder="Custom"
+                  placeholder={t("wizard.customPointsPlaceholder")}
                   className="w-24"
-                  aria-label="Custom points per match"
+                  aria-label={t("wizard.customPointsPlaceholder")}
                 />
               </div>
               <p className="mt-2 text-xs text-slate-500">
-                A match ends when both sides' rally points add up to{" "}
-                <span className="font-bold text-volt-300">{matchPoints}</span> —
-                e.g. {Math.ceil(matchPoints * 0.66)}–
-                {matchPoints - Math.ceil(matchPoints * 0.66)}.
+                {t("wizard.matchEndsHint", {
+                  points: matchPoints,
+                  a: Math.ceil(matchPoints * 0.66),
+                  b: matchPoints - Math.ceil(matchPoints * 0.66),
+                })}
               </p>
             </div>
           </div>
@@ -320,13 +340,10 @@ export function TournamentWizard({
         <div className="space-y-5">
           <Card>
             <h3 className="section-title">
-              Selected {team ? "players (paired into teams)" : "players"}{" "}
-              <span className="text-volt-300">({players.length})</span>
+              {t("wizard.selectedPlayers", { kind: kindLabel, count: players.length })}
             </h3>
             {players.length === 0 ? (
-              <p className="mt-2 text-sm text-slate-400">
-                Pick from the roster below, import a list, or add names manually.
-              </p>
+              <p className="mt-2 text-sm text-slate-400">{t("wizard.pickHint")}</p>
             ) : team ? (
               <div className="mt-3 space-y-2">
                 {teams.map(([a, b], ti) => (
@@ -334,7 +351,7 @@ export function TournamentWizard({
                     key={`${a}-${b}`}
                     className="flex items-center gap-2 rounded-xl border border-white/10 bg-white/[0.03] px-3 py-2"
                   >
-                    <Badge tone="volt">Team {ti + 1}</Badge>
+                    <Badge tone="volt">{t("wizard.teamLabel", { n: ti + 1 })}</Badge>
                     <span className="text-sm font-semibold text-white">
                       {a} / {b}
                     </span>
@@ -342,8 +359,7 @@ export function TournamentWizard({
                 ))}
                 {oddPlayerForTeams && (
                   <p className="text-xs font-medium text-amber-400">
-                    {players[players.length - 1]} has no partner yet — add one more
-                    player or remove them.
+                    {t("wizard.oddPlayerWarning", { name: players[players.length - 1] })}
                   </p>
                 )}
                 <div className="mt-2 flex flex-wrap gap-1.5">
@@ -381,7 +397,7 @@ export function TournamentWizard({
                   ))}
                 </div>
                 <Button variant="secondary" size="sm" onClick={shufflePlayers}>
-                  🔀 Shuffle pairs
+                  {t("wizard.shufflePairs")}
                 </Button>
               </div>
             ) : (
@@ -406,27 +422,25 @@ export function TournamentWizard({
             )}
             {byeWarning && (
               <p className="mt-3 text-xs font-medium text-amber-400">
-                {players.length} isn't divisible by 4 — every round,{" "}
-                {players.length % 4} player{players.length % 4 === 1 ? "" : "s"} will
-                rest (rests rotate fairly).
+                {t("wizard.byeWarningIndividual", {
+                  count: players.length,
+                  rest: players.length % 4,
+                  plural: pluralSuffix(players.length % 4, locale, "s", "e"),
+                })}
               </p>
             )}
             {teamByeWarning && (
               <p className="mt-3 text-xs font-medium text-amber-400">
-                With {teams.length} teams, one team rests each round (rests rotate
-                fairly).
+                {t("wizard.teamByeWarning", { count: teams.length })}
               </p>
             )}
           </Card>
 
           <div className="grid gap-5 lg:grid-cols-2">
             <Card>
-              <h4 className="text-sm font-bold text-white">From the roster</h4>
+              <h4 className="text-sm font-bold text-white">{t("wizard.fromRoster")}</h4>
               {roster.length === 0 ? (
-                <p className="mt-2 text-xs text-slate-500">
-                  The roster is empty — import players below or add them on the
-                  Players page.
-                </p>
+                <p className="mt-2 text-xs text-slate-500">{t("wizard.emptyRoster")}</p>
               ) : (
                 <div className="mt-3 max-h-64 space-y-1 overflow-y-auto pr-1">
                   {roster.map((p) => {
@@ -465,8 +479,8 @@ export function TournamentWizard({
                       setQuickAdd("");
                     }
                   }}
-                  placeholder="Quick add a name…"
-                  aria-label="Quick add player"
+                  placeholder={t("wizard.quickAddPlaceholder")}
+                  aria-label={t("wizard.quickAddPlaceholder")}
                   className="min-w-0 flex-1"
                 />
                 <Button
@@ -477,22 +491,20 @@ export function TournamentWizard({
                     setQuickAdd("");
                   }}
                 >
-                  Add
+                  {t("wizard.quickAdd")}
                 </Button>
               </div>
             </Card>
 
             <Card>
-              <h4 className="text-sm font-bold text-white">
-                Import from Playtomic / CSV / text
-              </h4>
+              <h4 className="text-sm font-bold text-white">{t("wizard.importTitle")}</h4>
               <div className="mt-3 space-y-3">
                 <Textarea
                   value={importText}
                   onChange={(e) => setImportText(e.target.value)}
                   rows={4}
-                  placeholder={"Paste names — one per line\nor CSV with a name column"}
-                  aria-label="Import players"
+                  placeholder={t("wizard.importPlaceholder")}
+                  aria-label={t("wizard.importTitle")}
                 />
                 <input
                   ref={fileRef}
@@ -500,14 +512,14 @@ export function TournamentWizard({
                   accept=".csv,.txt,text/csv,text/plain"
                   onChange={(e) => onFile(e.target.files?.[0])}
                   className="block w-full text-xs text-slate-400 file:mr-3 file:rounded-lg file:border-0 file:bg-white/10 file:px-3 file:py-1.5 file:text-xs file:font-semibold file:text-white hover:file:bg-white/15"
-                  aria-label="Upload player file"
+                  aria-label={t("wizard.importTitle")}
                 />
                 {parsedImport.length > 0 && (
                   <p className="text-xs text-slate-400">
-                    Found {parsedImport.length} names,{" "}
-                    <span className="font-semibold text-volt-300">
-                      {importNew.length} new
-                    </span>
+                    {t("wizard.foundNamesNew", {
+                      count: parsedImport.length,
+                      new: importNew.length,
+                    })}
                   </p>
                 )}
                 <Button
@@ -520,8 +532,10 @@ export function TournamentWizard({
                     if (fileRef.current) fileRef.current.value = "";
                   }}
                 >
-                  Add {importNew.length} player{importNew.length === 1 ? "" : "s"} to
-                  the list
+                  {t("wizard.addToList", {
+                    count: importNew.length,
+                    plural: pluralSuffix(importNew.length, locale, "s", "y"),
+                  })}
                 </Button>
               </div>
             </Card>
@@ -538,8 +552,8 @@ export function TournamentWizard({
           <div className="flex gap-2">
             {(
               [
-                ["numbered", "Numbered courts"],
-                ["custom", "Custom names"],
+                ["numbered", t("wizard.numberedCourts")],
+                ["custom", t("wizard.customCourts")],
               ] as const
             ).map(([mode, label]) => (
               <button
@@ -560,7 +574,7 @@ export function TournamentWizard({
 
           {courtMode === "numbered" ? (
             <div className="mt-5">
-              <label className="label">Number of courts</label>
+              <label className="label">{t("wizard.numberOfCourts")}</label>
               <div className="flex items-center gap-3">
                 <Button
                   variant="secondary"
@@ -586,19 +600,22 @@ export function TournamentWizard({
                   +
                 </Button>
                 <span className="text-xs text-slate-500">
-                  Suggested for {entrantCount} {team ? "teams" : "players"}:{" "}
-                  {suggestedCourts}
+                  {t("wizard.suggestedFor", {
+                    count: entrantCount,
+                    kind: kindLabel,
+                    suggested: suggestedCourts,
+                  })}
                 </span>
               </div>
             </div>
           ) : (
             <div className="mt-5">
-              <label className="label">Court names (one per line or comma-separated)</label>
+              <label className="label">{t("wizard.courtNamesLabel")}</label>
               <Textarea
                 value={customCourts}
                 onChange={(e) => setCustomCourts(e.target.value)}
                 rows={4}
-                placeholder={"Center Court\nPanorama\nRiverside"}
+                placeholder={t("wizard.courtNamesPlaceholder")}
               />
             </div>
           )}
@@ -610,7 +627,7 @@ export function TournamentWizard({
               </Badge>
             ))}
             {courts.length === 0 && (
-              <p className="text-xs text-amber-400">Add at least one court.</p>
+              <p className="text-xs text-amber-400">{t("wizard.addAtLeastOneCourt")}</p>
             )}
           </div>
         </Card>
@@ -619,30 +636,32 @@ export function TournamentWizard({
       {/* Step 5: review */}
       {step === 4 && (
         <Card>
-          <h3 className="section-title">Ready to start?</h3>
+          <h3 className="section-title">{t("wizard.readyTitle")}</h3>
           <dl className="mt-4 grid gap-x-8 gap-y-3 text-sm sm:grid-cols-2">
             <div>
-              <dt className="label">Tournament</dt>
+              <dt className="label">{t("wizard.reviewTournament")}</dt>
               <dd className="font-semibold text-white">{name}</dd>
             </div>
             <div>
-              <dt className="label">Format</dt>
+              <dt className="label">{t("wizard.reviewFormat")}</dt>
               <dd>
-                <Badge tone="blue">{typeLabel(type)}</Badge>
+                <Badge tone="blue">{formatLabel(t, type)}</Badge>
               </dd>
             </div>
             <div>
-              <dt className="label">{team ? "Teams" : "Players"}</dt>
+              <dt className="label">{team ? t("wizard.reviewTeams") : t("wizard.reviewPlayers")}</dt>
               <dd className="font-semibold text-white">
-                {entrantCount} {team ? `teams (${players.length} players)` : "players"}
+                {team
+                  ? t("wizard.reviewTeamsValue", { count: entrantCount, players: players.length })
+                  : t("wizard.reviewPlayersValue", { count: entrantCount })}
               </dd>
             </div>
             <div>
-              <dt className="label">Points per match</dt>
+              <dt className="label">{t("wizard.reviewPoints")}</dt>
               <dd className="font-semibold text-white">{matchPoints}</dd>
             </div>
             <div className="sm:col-span-2">
-              <dt className="label">Courts</dt>
+              <dt className="label">{t("wizard.reviewCourts")}</dt>
               <dd className="flex flex-wrap gap-1.5">
                 {courts.map((c) => (
                   <Badge key={c} tone="blue">
@@ -656,10 +675,10 @@ export function TournamentWizard({
             <p className="mt-4 text-sm font-medium text-red-400">{setupError}</p>
           ) : (
             <p className="mt-4 text-xs text-slate-500">
-              Round 1 is generated the moment you start —{" "}
+              {t("wizard.seedingNotePrefix")}{" "}
               {type.startsWith("mexicano")
-                ? "a random lottery draw."
-                : "an optimized draw that minimizes repeated partners and opponents."}
+                ? t("wizard.seedingNoteMexicano")
+                : t("wizard.seedingNoteOther")}
             </p>
           )}
           <ErrorText>{submitError}</ErrorText>
@@ -673,16 +692,16 @@ export function TournamentWizard({
           onClick={() => setStep((s) => Math.max(0, s - 1))}
           disabled={step === 0 || submitting}
         >
-          ← Back
+          {t("wizard.back")}
         </Button>
         {step < STEPS.length - 1 ? (
           <Button onClick={() => setStep((s) => s + 1)} disabled={!canNext}>
-            Continue →
+            {t("wizard.continue")}
           </Button>
         ) : (
           <Button onClick={start} disabled={submitting || Boolean(setupError)} size="lg">
             {submitting && <Spinner className="h-4 w-4" />}
-            🎾 Start tournament
+            {t("wizard.start")}
           </Button>
         )}
       </div>

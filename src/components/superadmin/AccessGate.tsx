@@ -1,19 +1,26 @@
 // Polite access-denied states for the superadmin pages. Rendered by every
 // /superadmin page when the viewer is not a super admin — never crash,
-// never leak data.
+// never leak data. `t` is passed in so this also works from Server Components.
 
 import Link from "next/link";
 import { EmptyState } from "@/components/ui";
+import type { Translator } from "@/lib/i18n";
 
-export function SuperAdminDenied({ email }: { email: string | null }) {
+export function SuperAdminDenied({
+  email,
+  t,
+}: {
+  email: string | null;
+  t: Translator;
+}) {
   if (!email) {
     return (
       <EmptyState
-        title="Sign in required"
-        hint="The super admin panel is only available to signed-in super admin accounts."
+        title={t("superadminDenied.signInTitle")}
+        hint={t("superadminDenied.signInHint")}
         action={
           <Link href="/sign-in" className="btn btn-primary">
-            Sign in
+            {t("superadminDenied.signIn")}
           </Link>
         }
       />
@@ -21,11 +28,11 @@ export function SuperAdminDenied({ email }: { email: string | null }) {
   }
   return (
     <EmptyState
-      title="No access"
-      hint={`You are signed in as ${email}, but this account does not have super admin access. Ask an existing super admin to add you.`}
+      title={t("superadminDenied.noAccessTitle")}
+      hint={t("superadminDenied.noAccessHint", { email })}
       action={
         <Link href="/" className="btn btn-secondary">
-          Back to home
+          {t("superadminDenied.backHome")}
         </Link>
       }
     />

@@ -5,6 +5,8 @@ import { dbConnect } from "@/lib/db";
 import { Tournament } from "@/lib/models";
 import { serialize, type TournamentJSON } from "@/lib/types";
 import { computeStandings } from "@/lib/engine";
+import { createT } from "@/lib/i18n";
+import { getLocale } from "@/lib/i18n/server";
 import { Badge } from "@/components/ui";
 import { AutoRefresh } from "@/components/public/AutoRefresh";
 import { ScoreForm } from "@/components/public/ScoreForm";
@@ -21,6 +23,7 @@ export default async function CourtPage({
   const { tournamentId, court: courtParam } = await params;
   if (!isValidObjectId(tournamentId)) notFound();
   const court = decodeURIComponent(courtParam);
+  const t = createT(await getLocale());
 
   await dbConnect();
   const doc = await Tournament.findById(tournamentId).lean();
@@ -44,17 +47,17 @@ export default async function CourtPage({
           href={`/t/${tournament._id}`}
           className="text-xs font-semibold text-slate-500 hover:text-volt-300"
         >
-          ← {tournament.name}
+          {t("courtPage.backTo", { name: tournament.name })}
         </Link>
         <h1 className="mt-2 text-4xl font-extrabold uppercase tracking-wide text-volt-300 sm:text-5xl">
           {court}
         </h1>
         {isActive && round && (
           <p className="mt-2 text-lg text-slate-400">
-            Round {round.number}
+            {t("courtPage.round", { number: round.number })}
             {round.isFinal && (
               <Badge tone="volt" className="ml-2 align-middle">
-                FINAL
+                {t("courtPage.finalBadge")}
               </Badge>
             )}
           </p>
@@ -63,22 +66,20 @@ export default async function CourtPage({
 
       {!isActive ? (
         <div className="card card-pad py-12">
-          <p className="text-2xl font-bold text-white">Tournament finished 🎉</p>
+          <p className="text-2xl font-bold text-white">{t("courtPage.finishedTitle")}</p>
           <Link
             href={`/t/${tournament._id}/results`}
             className="btn btn-primary btn-lg mt-6"
           >
-            See final results
+            {t("courtPage.seeResults")}
           </Link>
         </div>
       ) : !match ? (
         <div className="card card-pad py-12">
           <p className="text-xl font-semibold text-white">
-            No match on this court in round {round?.number}.
+            {t("courtPage.noMatchTitle", { round: round?.number ?? "" })}
           </p>
-          <p className="mt-2 text-sm text-slate-400">
-            The next round may bring one — this page refreshes automatically.
-          </p>
+          <p className="mt-2 text-sm text-slate-400">{t("courtPage.noMatchHint")}</p>
         </div>
       ) : (
         <div className="card card-pad py-8">
@@ -90,7 +91,7 @@ export default async function CourtPage({
                 </p>
               ))}
             </div>
-            <span className="text-xl font-bold text-slate-500">vs</span>
+            <span className="text-xl font-bold text-slate-500">{t("courtPage.vs")}</span>
             <div className="text-left">
               {sideNames(match.sideB, map).map((n) => (
                 <p key={n} className="text-2xl font-extrabold text-white sm:text-3xl">
@@ -108,9 +109,7 @@ export default async function CourtPage({
                   <span className="mx-3 text-slate-600">:</span>
                   {match.scoreB}
                 </p>
-                <p className="mt-4 text-sm text-slate-400">
-                  Result saved — waiting for the next round…
-                </p>
+                <p className="mt-4 text-sm text-slate-400">{t("courtPage.resultSaved")}</p>
               </>
             ) : (
               <ScoreForm
@@ -126,8 +125,8 @@ export default async function CourtPage({
       )}
 
       <div className="text-left">
-        <h2 className="section-title mb-3 text-center">Top 5</h2>
-        <StandingsTable standings={standings} limit={5} showRecord={false} />
+        <h2 className="section-title mb-3 text-center">{t("courtPage.top5")}</h2>
+        <StandingsTable standings={standings} t={t} limit={5} showRecord={false} />
       </div>
     </div>
   );

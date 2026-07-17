@@ -1,7 +1,9 @@
 // Live standings table shared by tournament, court and club pages.
-// Pure props — safe in server and client components.
+// Pure props — safe in server and client components. `t` is passed in
+// (rather than read via a hook) so this also works from Server Components.
 
 import type { StandingRow } from "@/lib/engine";
+import type { Translator } from "@/lib/i18n";
 import { cn } from "@/lib/cn";
 
 const MEDALS = ["🥇", "🥈", "🥉"];
@@ -12,10 +14,12 @@ export function medalFor(position: number): string | null {
 
 export function StandingsTable({
   standings,
+  t,
   limit,
   showRecord = true,
 }: {
   standings: StandingRow[];
+  t: Translator;
   limit?: number;
   showRecord?: boolean;
 }) {
@@ -25,9 +29,9 @@ export function StandingsTable({
       <table className="table-base">
         <thead>
           <tr>
-            <th className="w-12">#</th>
-            <th>Player</th>
-            <th className="text-right">Points</th>
+            <th className="w-12">{t("clubPage.position")}</th>
+            <th>{t("clubPage.player")}</th>
+            <th className="text-right">{t("clubPage.points")}</th>
             {showRecord && (
               <>
                 <th className="text-right">W–D–L</th>

@@ -13,6 +13,7 @@
     "seed": "tsx scripts/seed.ts"
   },
   "dependencies": {
+    "@clerk/localizations": "^3.37.8",
     "@clerk/nextjs": "^6.12.0",
     "mongoose": "^8.12.0",
     "next": "15.5.20",

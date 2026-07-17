@@ -24,9 +24,15 @@ club ranking updates automatically.
 - **Club ranking**: 1st place 100 pts, 2nd 90 … 10th 10, everyone else 1
   participation point; points count for **365 days**; managers can edit
   points and add manual adjustments
-- **Roles**: public club pages → club managers (assigned by email) →
-  super admins (default: `m.ignaczak.92@gmail.com`), with a full audit log
-  in the super admin panel
+- **Roles**: public club pages → club managers (assigned by super admins,
+  by email or by searching registered users) → super admins (default:
+  `m.ignaczak.92@gmail.com`), with a full audit log in the super admin panel
+- **Multi-club aware**: managers of more than one club get an explicit club
+  picker before creating a tournament, so it's never ambiguous which club
+  it's for
+- **English & Polish**: a language switcher in the header (cookie-based, no
+  URL prefix) covers the whole app, including Clerk's own sign-in/sign-up
+  UI via `@clerk/localizations`
 
 ## Stack
 

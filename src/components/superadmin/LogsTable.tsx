@@ -4,6 +4,7 @@ import { useMemo, useState } from "react";
 import { Input, Select } from "@/components/ui";
 import type { AuditLogJSON } from "@/lib/types";
 import { ActionBadge } from "./ActionBadge";
+import { useT } from "@/components/i18n/LocaleProvider";
 
 export function LogsTable({
   logs,
@@ -14,6 +15,7 @@ export function LogsTable({
   clubNames: Record<string, string>;
   limit: number;
 }) {
+  const t = useT();
   const [query, setQuery] = useState("");
   const [prefix, setPrefix] = useState("all");
 
@@ -48,17 +50,17 @@ export function LogsTable({
         <Input
           value={query}
           onChange={(e) => setQuery(e.target.value)}
-          placeholder="Filter by actor, action or message…"
-          aria-label="Filter log entries"
+          placeholder={t("superadminLogs.filterPlaceholder")}
+          aria-label={t("superadminLogs.filterPlaceholder")}
           className="min-w-0 flex-1 sm:max-w-sm"
         />
         <Select
           value={prefix}
           onChange={(e) => setPrefix(e.target.value)}
-          aria-label="Filter by action prefix"
+          aria-label={t("superadminLogs.allActions")}
           className="w-auto"
         >
-          <option value="all">All actions</option>
+          <option value="all">{t("superadminLogs.allActions")}</option>
           {prefixes.map((p) => (
             <option key={p} value={p}>
               {p}.*
@@ -66,7 +68,7 @@ export function LogsTable({
           ))}
         </Select>
         <span className="ml-auto text-xs text-slate-500">
-          Showing {filtered.length} of {logs.length} entries
+          {t("superadminLogs.showing", { filtered: filtered.length, total: logs.length })}
         </span>
       </div>
 
@@ -74,11 +76,11 @@ export function LogsTable({
         <table className="table-base">
           <thead>
             <tr>
-              <th>Time</th>
-              <th>Actor</th>
-              <th>Action</th>
-              <th>Message</th>
-              <th>Club</th>
+              <th>{t("superadminLogs.timeHeader")}</th>
+              <th>{t("superadminLogs.actorHeader")}</th>
+              <th>{t("superadminLogs.actionHeader")}</th>
+              <th>{t("superadminLogs.messageHeader")}</th>
+              <th>{t("superadminLogs.clubHeader")}</th>
             </tr>
           </thead>
           <tbody>
@@ -86,8 +88,8 @@ export function LogsTable({
               <tr>
                 <td colSpan={5} className="py-10 text-center text-sm text-slate-400">
                   {logs.length === 0
-                    ? "No activity recorded yet — entries appear as soon as anything changes in the app."
-                    : "No entries match your filter."}
+                    ? t("superadminLogs.noActivity")
+                    : t("superadminLogs.noMatches")}
                 </td>
               </tr>
             ) : (
@@ -117,11 +119,11 @@ export function LogsTable({
       </div>
 
       <p className="text-xs text-slate-500">
-        Loaded the latest {logs.length} entries (limit {limit}). Adjust with{" "}
+        {t("superadminLogs.loadedNote", { count: logs.length, limit })}{" "}
         <code className="rounded bg-white/5 px-1 py-0.5 font-mono text-slate-400">
           ?limit=
         </code>{" "}
-        in the URL.
+        {t("superadminLogs.loadedNoteSuffix")}
       </p>
     </div>
   );

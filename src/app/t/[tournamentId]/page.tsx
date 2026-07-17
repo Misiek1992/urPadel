@@ -4,7 +4,10 @@ import { isValidObjectId } from "mongoose";
 import { dbConnect } from "@/lib/db";
 import { Club, Tournament } from "@/lib/models";
 import { serialize, type ClubJSON, type TournamentJSON } from "@/lib/types";
-import { computeStandings, typeLabel } from "@/lib/engine";
+import { computeStandings } from "@/lib/engine";
+import { formatLabel } from "@/lib/i18n/formats";
+import { createT } from "@/lib/i18n";
+import { getLocale } from "@/lib/i18n/server";
 import { Badge, PageHeader } from "@/components/ui";
 import { AutoRefresh } from "@/components/public/AutoRefresh";
 import { Collapsible } from "@/components/public/Collapsible";
@@ -26,6 +29,7 @@ export default async function TournamentPage({
 }) {
   const { tournamentId } = await params;
   if (!isValidObjectId(tournamentId)) notFound();
+  const t = createT(await getLocale());
   await dbConnect();
   const doc = await Tournament.findById(tournamentId).lean();
   if (!doc) notFound();
@@ -56,24 +60,33 @@ export default async function TournamentPage({
                 {club.name}
               </Link>
             )}
-            <Badge tone="blue">{typeLabel(tournament.type)}</Badge>
+            <Badge tone="blue">{formatLabel(t, tournament.type)}</Badge>
             {isActive ? (
               <Badge tone="volt" className="animate-pulse">
-                Live · Round {round?.number}
+                {t("tournamentPage.live")} · {t("tournamentPage.round")}{" "}
+                {round?.number}
               </Badge>
             ) : (
-              <Badge tone="slate">Finished {formatDate(tournament.finishedAt ?? tournament.playedAt)}</Badge>
+              <Badge tone="slate">
+                {t("tournamentPage.finished", {
+                  date: formatDate(tournament.finishedAt ?? tournament.playedAt),
+                })}
+              </Badge>
             )}
             <span className="text-xs text-slate-500">
-              {tournament.matchPoints} points per match · {tournament.courts.length}{" "}
-              court{tournament.courts.length === 1 ? "" : "s"} ·{" "}
-              {tournament.entrants.length} entrants
+              {t("tournamentPage.pointsPerMatch", { points: tournament.matchPoints })} ·{" "}
+              {tournament.courts.length === 1
+                ? t("tournamentPage.courtsCount", { count: tournament.courts.length })
+                : t("tournamentPage.courtsCountPlural", {
+                    count: tournament.courts.length,
+                  })}{" "}
+              · {t("tournamentPage.entrantsCount", { count: tournament.entrants.length })}
             </span>
           </span>
         }
         actions={
           <Link href={`/t/${tournament._id}/results`} className="btn btn-secondary btn-sm">
-            Results table
+            {t("tournamentPage.resultsTable")}
           </Link>
         }
       />
@@ -97,7 +110,7 @@ export default async function TournamentPage({
                   <p className="text-xs text-slate-400">{row.players.join(" · ")}</p>
                 )}
                 <p className="mt-1 text-2xl font-extrabold text-volt-300">
-                  {row.points} pts
+                  {row.points} {t("home.pointsLabel")}
                 </p>
               </div>
             );
@@ -109,16 +122,14 @@ export default async function TournamentPage({
         <section>
           <div className="mb-4 flex flex-wrap items-center justify-between gap-2">
             <h2 className="section-title">
-              Round {round.number}
+              {t("tournamentPage.round")} {round.number}
               {round.isFinal && (
                 <Badge tone="volt" className="ml-2 align-middle">
-                  FINAL — seeded by ranking
+                  {t("tournamentPage.finalBadge")}
                 </Badge>
               )}
             </h2>
-            <p className="text-xs text-slate-500">
-              Enter the score at your court when the match ends.
-            </p>
+            <p className="text-xs text-slate-500">{t("tournamentPage.enterScoreHint")}</p>
           </div>
           <div className="grid gap-4 lg:grid-cols-2">
             {round.matches.map((match) => {
@@ -135,7 +146,7 @@ export default async function TournamentPage({
                       href={`/t/${tournament._id}/court/${encodeURIComponent(match.court)}`}
                       className="text-xs font-semibold text-slate-400 hover:text-volt-300"
                     >
-                      Court screen →
+                      {t("tournamentPage.courtScreen")}
                     </Link>
                   </div>
                   <div className="mt-4 grid grid-cols-[1fr_auto_1fr] items-center gap-3">
@@ -152,7 +163,7 @@ export default async function TournamentPage({
                           {match.scoreB}
                         </p>
                       ) : (
-                        <span className="badge badge-slate">vs</span>
+                        <span className="badge badge-slate">{t("tournamentPage.vs")}</span>
                       )}
                     </div>
                     <div>
@@ -177,7 +188,7 @@ export default async function TournamentPage({
           </div>
           {round.byes.length > 0 && (
             <p className="mt-4 text-sm text-slate-400">
-              <span className="badge badge-slate mr-2">Resting</span>
+              <span className="badge badge-slate mr-2">{t("tournamentPage.resting")}</span>
               {round.byes.map((id) => map[id]?.name ?? id).join(", ")}
             </p>
           )}
@@ -186,22 +197,22 @@ export default async function TournamentPage({
 
       <section>
         <h2 className="section-title mb-4">
-          {isActive ? "Live standings" : "Final standings"}
+          {isActive ? t("tournamentPage.liveStandings") : t("tournamentPage.finalStandings")}
         </h2>
-        <StandingsTable standings={standings} />
+        <StandingsTable standings={standings} t={t} />
       </section>
 
       {pastRounds.length > 0 && (
         <section>
-          <h2 className="section-title mb-4">Previous rounds</h2>
+          <h2 className="section-title mb-4">{t("tournamentPage.previousRounds")}</h2>
           <div className="space-y-3">
             {[...pastRounds].reverse().map((r) => (
               <Collapsible
                 key={r.number}
-                title={`Round ${r.number}${r.isFinal ? " — FINAL" : ""}`}
+                title={`${t("tournamentPage.round")} ${r.number}${r.isFinal ? ` — ${t("tournamentPage.finalBadge")}` : ""}`}
                 meta={
                   <span className="text-xs text-slate-500">
-                    {r.matches.length} matches
+                    {t("tournamentPage.matchesCount", { count: r.matches.length })}
                   </span>
                 }
               >
@@ -225,7 +236,9 @@ export default async function TournamentPage({
                     ))}
                     {r.byes.length > 0 && (
                       <tr>
-                        <td className="text-xs text-slate-500">Resting</td>
+                        <td className="text-xs text-slate-500">
+                          {t("tournamentPage.resting")}
+                        </td>
                         <td colSpan={3} className="text-sm text-slate-400">
                           {r.byes.map((id) => map[id]?.name ?? id).join(", ")}
                         </td>

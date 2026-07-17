@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { useState, type FormEvent } from "react";
+import { useEffect, useRef, useState, type FormEvent } from "react";
 import {
   Badge,
   Button,
@@ -13,9 +13,12 @@ import {
   Modal,
   Spinner,
   Textarea,
+  cn,
 } from "@/components/ui";
 import type { ClubJSON } from "@/lib/types";
 import { isValidEmail, NETWORK_ERROR, readApiError } from "./api";
+import type { ClerkUserSummary } from "@/app/api/superadmin/users/route";
+import { useT } from "@/components/i18n/LocaleProvider";
 
 export function ClubsManager({
   clubs,
@@ -26,13 +29,14 @@ export function ClubsManager({
   playersByClub: Record<string, number>;
   tournamentsByClub: Record<string, number>;
 }) {
+  const t = useT();
   return (
     <div className="space-y-6">
       <CreateClubForm />
       {clubs.length === 0 ? (
         <EmptyState
-          title="No clubs yet"
-          hint="Create the first club with the form above — you can assign manager emails right after."
+          title={t("superadminClubs.noClubsTitle")}
+          hint={t("superadminClubs.noClubsHint")}
         />
       ) : (
         <div className="grid gap-4 lg:grid-cols-2">
@@ -52,6 +56,7 @@ export function ClubsManager({
 
 function CreateClubForm() {
   const router = useRouter();
+  const t = useT();
   const [name, setName] = useState("");
   const [city, setCity] = useState("");
   const [description, setDescription] = useState("");
@@ -62,7 +67,7 @@ function CreateClubForm() {
     e.preventDefault();
     const trimmedName = name.trim();
     if (!trimmedName) {
-      setError("Club name is required.");
+      setError(t("superadminClubs.nameRequired"));
       return;
     }
     setSaving(true);
@@ -94,52 +99,50 @@ function CreateClubForm() {
 
   return (
     <Card>
-      <h3 className="section-title">Create a club</h3>
-      <p className="mt-1 text-sm text-slate-400">
-        The public URL slug is generated automatically from the name.
-      </p>
+      <h3 className="section-title">{t("superadminClubs.createTitle")}</h3>
+      <p className="mt-1 text-sm text-slate-400">{t("superadminClubs.createHint")}</p>
       <form onSubmit={onSubmit} className="mt-4 space-y-4">
         <div className="grid gap-4 sm:grid-cols-2">
           <div>
             <label className="label" htmlFor="club-name">
-              Name
+              {t("superadminClubs.nameLabel")}
             </label>
             <Input
               id="club-name"
               value={name}
               onChange={(e) => setName(e.target.value)}
-              placeholder="Padel Arena Warszawa"
+              placeholder={t("superadminClubs.namePlaceholder")}
               required
             />
           </div>
           <div>
             <label className="label" htmlFor="club-city">
-              City
+              {t("superadminClubs.cityLabel")}
             </label>
             <Input
               id="club-city"
               value={city}
               onChange={(e) => setCity(e.target.value)}
-              placeholder="Warszawa"
+              placeholder={t("superadminClubs.cityPlaceholder")}
             />
           </div>
         </div>
         <div>
           <label className="label" htmlFor="club-description">
-            Description
+            {t("superadminClubs.descriptionLabel")}
           </label>
           <Textarea
             id="club-description"
             value={description}
             onChange={(e) => setDescription(e.target.value)}
-            placeholder="A short description shown on the club's public page…"
+            placeholder={t("superadminClubs.descriptionPlaceholder")}
             rows={3}
           />
         </div>
         <div className="flex items-center gap-3">
           <Button type="submit" disabled={saving}>
             {saving && <Spinner className="h-3.5 w-3.5" />}
-            Create club
+            {t("superadminClubs.createBtn")}
           </Button>
         </div>
         <ErrorText>{error}</ErrorText>
@@ -158,10 +161,15 @@ function ClubCard({
   tournamentCount: number;
 }) {
   const router = useRouter();
+  const t = useT();
   const [managerEmail, setManagerEmail] = useState("");
   const [addingManager, setAddingManager] = useState(false);
   const [removingEmail, setRemovingEmail] = useState<string | null>(null);
   const [managerError, setManagerError] = useState<string | null>(null);
+  const [suggestions, setSuggestions] = useState<ClerkUserSummary[]>([]);
+  const [searching, setSearching] = useState(false);
+  const [showSuggestions, setShowSuggestions] = useState(false);
+  const debounceRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const [deleteOpen, setDeleteOpen] = useState(false);
   const [confirmName, setConfirmName] = useState("");
   const [deleting, setDeleting] = useState(false);
@@ -177,11 +185,44 @@ function ClubCard({
     setDeleteError(null);
   }
 
-  async function addManager(e: FormEvent) {
-    e.preventDefault();
-    const email = managerEmail.trim().toLowerCase();
-    if (!isValidEmail(email)) {
-      setManagerError("Enter a valid email address.");
+  useEffect(() => {
+    if (debounceRef.current) clearTimeout(debounceRef.current);
+    const query = managerEmail.trim();
+    if (query.length < 2) {
+      setSuggestions([]);
+      setSearching(false);
+      return;
+    }
+    setSearching(true);
+    debounceRef.current = setTimeout(async () => {
+      try {
+        const res = await fetch(
+          `/api/superadmin/users?q=${encodeURIComponent(query)}`
+        );
+        if (res.ok) {
+          const data = (await res.json()) as { users: ClerkUserSummary[] };
+          setSuggestions(
+            data.users.filter(
+              (u) => !club.managerEmails.includes(u.email)
+            )
+          );
+        }
+      } catch {
+        // Search is a convenience — silently ignore network hiccups.
+      } finally {
+        setSearching(false);
+      }
+    }, 300);
+    return () => {
+      if (debounceRef.current) clearTimeout(debounceRef.current);
+    };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [managerEmail]);
+
+  async function addManagerEmail(email: string) {
+    const normalized = email.trim().toLowerCase();
+    if (!isValidEmail(normalized)) {
+      setManagerError(t("superadminClubs.invalidEmail"));
       return;
     }
     setAddingManager(true);
@@ -190,19 +231,26 @@ function ClubCard({
       const res = await fetch(`/api/clubs/${club._id}/managers`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ email }),
+        body: JSON.stringify({ email: normalized }),
       });
       if (!res.ok) {
         setManagerError(await readApiError(res));
         return;
       }
       setManagerEmail("");
+      setSuggestions([]);
+      setShowSuggestions(false);
       router.refresh();
     } catch {
       setManagerError(NETWORK_ERROR);
     } finally {
       setAddingManager(false);
     }
+  }
+
+  async function addManager(e: FormEvent) {
+    e.preventDefault();
+    await addManagerEmail(managerEmail);
   }
 
   async function removeManager(email: string) {
@@ -256,8 +304,10 @@ function ClubCard({
           </div>
         </div>
         <p className="shrink-0 text-xs text-slate-400">
-          <span className="font-semibold text-white">{playerCount}</span> players ·{" "}
-          <span className="font-semibold text-white">{tournamentCount}</span> tournaments
+          <span className="font-semibold text-white">{playerCount}</span>{" "}
+          {t("superadminClubs.playersLabel")} ·{" "}
+          <span className="font-semibold text-white">{tournamentCount}</span>{" "}
+          {t("superadminClubs.tournamentsLabel")}
         </p>
       </div>
 
@@ -266,12 +316,9 @@ function ClubCard({
       )}
 
       <div>
-        <p className="label">Managers</p>
+        <p className="label">{t("superadminClubs.managersLabel")}</p>
         {club.managerEmails.length === 0 ? (
-          <p className="text-xs text-slate-500">
-            No managers yet — add an email below to give someone access to the
-            manager panel for this club.
-          </p>
+          <p className="text-xs text-slate-500">{t("superadminClubs.noManagersHint")}</p>
         ) : (
           <div className="flex flex-wrap gap-1.5">
             {club.managerEmails.map((email) => (
@@ -284,7 +331,7 @@ function ClubCard({
                   type="button"
                   onClick={() => removeManager(email)}
                   disabled={removingEmail !== null}
-                  aria-label={`Remove manager ${email}`}
+                  aria-label={t("superadminClubs.removeManagerAria", { email })}
                   className="rounded-full p-0.5 text-slate-400 transition-colors hover:bg-red-500/20 hover:text-red-300 disabled:cursor-not-allowed disabled:opacity-50"
                 >
                   {removingEmail === email ? (
@@ -306,18 +353,57 @@ function ClubCard({
             ))}
           </div>
         )}
-        <form onSubmit={addManager} className="mt-3 flex gap-2">
-          <Input
-            type="email"
-            value={managerEmail}
-            onChange={(e) => setManagerEmail(e.target.value)}
-            placeholder="manager@example.com"
-            aria-label={`Add manager email for ${club.name}`}
-            className="min-w-0 flex-1"
-          />
+        <form onSubmit={addManager} className="relative mt-3 flex gap-2">
+          <div className="relative min-w-0 flex-1">
+            <Input
+              type="text"
+              value={managerEmail}
+              onChange={(e) => {
+                setManagerEmail(e.target.value);
+                setShowSuggestions(true);
+              }}
+              onFocus={() => setShowSuggestions(true)}
+              onBlur={() => setTimeout(() => setShowSuggestions(false), 150)}
+              placeholder={t("superadminClubs.searchPlaceholder")}
+              aria-label={t("superadminClubs.addManagerAria", { name: club.name })}
+              className="w-full"
+            />
+            {showSuggestions && managerEmail.trim().length >= 2 && (
+              <div className="absolute inset-x-0 top-full z-10 mt-1 max-h-56 overflow-y-auto rounded-xl border border-white/10 bg-navy-850 shadow-xl">
+                {searching ? (
+                  <p className="flex items-center gap-2 px-3 py-2.5 text-xs text-slate-400">
+                    <Spinner className="h-3 w-3" /> {t("superadminClubs.searching")}
+                  </p>
+                ) : suggestions.length === 0 ? (
+                  <p className="px-3 py-2.5 text-xs text-slate-500">
+                    {t("superadminClubs.noUsersFound")}
+                  </p>
+                ) : (
+                  suggestions.map((u) => (
+                    <button
+                      key={u.id}
+                      type="button"
+                      onMouseDown={(e) => {
+                        e.preventDefault();
+                        addManagerEmail(u.email);
+                      }}
+                      className={cn(
+                        "flex w-full flex-col items-start gap-0.5 px-3 py-2 text-left text-sm hover:bg-white/5"
+                      )}
+                    >
+                      {u.name && (
+                        <span className="font-semibold text-white">{u.name}</span>
+                      )}
+                      <span className="text-xs text-slate-400">{u.email}</span>
+                    </button>
+                  ))
+                )}
+              </div>
+            )}
+          </div>
           <Button type="submit" variant="secondary" size="sm" disabled={addingManager}>
             {addingManager && <Spinner className="h-3 w-3" />}
-            Add
+            {t("superadminClubs.add")}
           </Button>
         </form>
         <ErrorText>{managerError}</ErrorText>
@@ -325,10 +411,10 @@ function ClubCard({
 
       <div className="mt-auto flex flex-wrap items-center gap-2 border-t border-white/5 pt-4">
         <Link href={`/club/${club.slug}`} className="btn btn-ghost btn-sm">
-          Public page
+          {t("superadminClubs.publicPage")}
         </Link>
         <Link href={`/manager?club=${club._id}`} className="btn btn-ghost btn-sm">
-          Manager panel
+          {t("superadminClubs.managerPanel")}
         </Link>
         <Button
           variant="danger"
@@ -336,18 +422,18 @@ function ClubCard({
           className="ml-auto"
           onClick={() => setDeleteOpen(true)}
         >
-          Delete club
+          {t("superadminClubs.deleteClub")}
         </Button>
       </div>
 
       <Modal
         open={deleteOpen}
         onClose={closeDeleteModal}
-        title={`Delete ${club.name}?`}
+        title={t("superadminClubs.deleteModalTitle", { name: club.name })}
         footer={
           <>
             <Button variant="secondary" onClick={closeDeleteModal} disabled={deleting}>
-              Cancel
+              {t("superadminClubs.cancel")}
             </Button>
             <Button
               variant="danger"
@@ -355,32 +441,24 @@ function ClubCard({
               disabled={deleting || !confirmMatches}
             >
               {deleting && <Spinner className="h-3.5 w-3.5" />}
-              Delete club permanently
+              {t("superadminClubs.deletePermanently")}
             </Button>
           </>
         }
       >
         <p className="text-sm text-slate-300">
-          This permanently deletes{" "}
-          <span className="font-semibold text-white">{club.name}</span> and
-          everything that belongs to it:
+          {t("superadminClubs.deleteIntro", { name: club.name })}
         </p>
         <ul className="mt-3 list-inside list-disc space-y-1 text-sm text-slate-400">
-          <li>
-            <span className="font-semibold text-white">{playerCount}</span> roster
-            players
-          </li>
-          <li>
-            <span className="font-semibold text-white">{tournamentCount}</span>{" "}
-            tournaments with all their rounds and results
-          </li>
-          <li>the entire club ranking history</li>
+          <li>{t("superadminClubs.deletePlayersItem", { count: playerCount })}</li>
+          <li>{t("superadminClubs.deleteTournamentsItem", { count: tournamentCount })}</li>
+          <li>{t("superadminClubs.deleteRankingItem")}</li>
         </ul>
         <p className="mt-3 text-sm font-semibold text-red-300">
-          This cannot be undone.
+          {t("superadminClubs.deleteWarning")}
         </p>
         <label className="label mt-4" htmlFor={`confirm-delete-${club._id}`}>
-          Type the club name to confirm
+          {t("superadminClubs.confirmNamePrompt")}
         </label>
         <Input
           id={`confirm-delete-${club._id}`}

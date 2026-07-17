@@ -18,15 +18,16 @@ import {
 } from "@/components/ui";
 import type { ClubPlayerJSON } from "@/lib/types";
 import { parsePlayersText } from "@/lib/players-import";
+import { useT } from "@/components/i18n/LocaleProvider";
 
-async function readApiError(res: Response): Promise<string> {
+async function readApiError(res: Response, fallback: string): Promise<string> {
   try {
     const data = (await res.json()) as { error?: unknown };
     if (typeof data?.error === "string" && data.error) return data.error;
   } catch {
     // fall through
   }
-  return `Request failed (${res.status})`;
+  return fallback;
 }
 
 export function PlayersManager({
@@ -37,6 +38,7 @@ export function PlayersManager({
   players: ClubPlayerJSON[];
 }) {
   const router = useRouter();
+  const t = useT();
   const rosterLower = useMemo(
     () => new Set(players.map((p) => p.nameLower)),
     [players]
@@ -71,7 +73,7 @@ export function PlayersManager({
   async function addPlayer(e: FormEvent) {
     e.preventDefault();
     if (!newName.trim()) {
-      setAddError("Enter a player name.");
+      setAddError(t("managerPlayers.nameRequired"));
       return;
     }
     setAdding(true);
@@ -86,14 +88,14 @@ export function PlayersManager({
         }),
       });
       if (!res.ok) {
-        setAddError(await readApiError(res));
+        setAddError(await readApiError(res, t("common.requestFailed", { status: res.status })));
         return;
       }
       setNewName("");
       setNewEmail("");
       router.refresh();
     } catch {
-      setAddError("Network error — please try again.");
+      setAddError(t("common.networkError"));
     } finally {
       setAdding(false);
     }
@@ -118,15 +120,15 @@ export function PlayersManager({
         body: JSON.stringify({ names: parsedNew }),
       });
       if (!res.ok) {
-        setImportError(await readApiError(res));
+        setImportError(await readApiError(res, t("common.requestFailed", { status: res.status })));
         return;
       }
-      setImportDone(`Added ${parsedNew.length} players to the roster.`);
+      setImportDone(t("managerPlayers.importDone", { count: parsedNew.length }));
       setImportText("");
       if (fileRef.current) fileRef.current.value = "";
       router.refresh();
     } catch {
-      setImportError("Network error — please try again.");
+      setImportError(t("common.networkError"));
     } finally {
       setImporting(false);
     }
@@ -150,13 +152,13 @@ export function PlayersManager({
         body: JSON.stringify({ name: editName.trim(), email: editEmail.trim() }),
       });
       if (!res.ok) {
-        setEditError(await readApiError(res));
+        setEditError(await readApiError(res, t("common.requestFailed", { status: res.status })));
         return;
       }
       setEditing(null);
       router.refresh();
     } catch {
-      setEditError("Network error — please try again.");
+      setEditError(t("common.networkError"));
     } finally {
       setEditSaving(false);
     }
@@ -171,35 +173,37 @@ export function PlayersManager({
         method: "DELETE",
       });
       if (!res.ok) {
-        setDeleteError(await readApiError(res));
+        setDeleteError(await readApiError(res, t("common.requestFailed", { status: res.status })));
         return;
       }
       setDeleting(null);
       router.refresh();
     } catch {
-      setDeleteError("Network error — please try again.");
+      setDeleteError(t("common.networkError"));
     } finally {
       setDeleteBusy(false);
     }
   }
+
+  const [bulkHintBefore, bulkHintAfter] = t("managerPlayers.bulkHint").split("{bold}");
 
   return (
     <div className="grid gap-6 lg:grid-cols-[2fr_1fr]">
       <div className="space-y-6">
         {players.length === 0 ? (
           <EmptyState
-            title="No players in the roster yet"
-            hint="Add players one by one or import a whole list from Playtomic / CSV on the right."
+            title={t("managerPlayers.noPlayersTitle")}
+            hint={t("managerPlayers.noPlayersHint")}
           />
         ) : (
           <div className="table-wrap">
             <table className="table-base">
               <thead>
                 <tr>
-                  <th>Player</th>
-                  <th>Email</th>
-                  <th>Added</th>
-                  <th className="text-right">Actions</th>
+                  <th>{t("managerPlayers.player")}</th>
+                  <th>{t("managerPlayers.email")}</th>
+                  <th>{t("managerPlayers.added")}</th>
+                  <th className="text-right">{t("managerPlayers.actions")}</th>
                 </tr>
               </thead>
               <tbody>
@@ -216,7 +220,7 @@ export function PlayersManager({
                     </td>
                     <td className="whitespace-nowrap text-right">
                       <Button variant="ghost" size="sm" onClick={() => openEdit(p)}>
-                        Edit
+                        {t("managerPlayers.edit")}
                       </Button>
                       <Button
                         variant="ghost"
@@ -227,7 +231,7 @@ export function PlayersManager({
                           setDeleting(p);
                         }}
                       >
-                        Delete
+                        {t("managerPlayers.delete")}
                       </Button>
                     </td>
                   </tr>
@@ -240,37 +244,37 @@ export function PlayersManager({
 
       <div className="space-y-6">
         <Card>
-          <h3 className="section-title">Add a player</h3>
+          <h3 className="section-title">{t("managerPlayers.addTitle")}</h3>
           <form onSubmit={addPlayer} className="mt-4 space-y-3">
             <Input
               value={newName}
               onChange={(e) => setNewName(e.target.value)}
-              placeholder="Full name"
-              aria-label="Player name"
+              placeholder={t("managerPlayers.namePlaceholder")}
+              aria-label={t("managerPlayers.namePlaceholder")}
             />
             <Input
               type="email"
               value={newEmail}
               onChange={(e) => setNewEmail(e.target.value)}
-              placeholder="Email (optional)"
-              aria-label="Player email"
+              placeholder={t("managerPlayers.emailPlaceholder")}
+              aria-label={t("managerPlayers.emailPlaceholder")}
             />
             <Button type="submit" disabled={adding} className="w-full">
               {adding && <Spinner className="h-3.5 w-3.5" />}
-              Add to roster
+              {t("managerPlayers.addToRoster")}
             </Button>
             <ErrorText>{addError}</ErrorText>
           </form>
         </Card>
 
         <Card>
-          <h3 className="section-title">Bulk import</h3>
+          <h3 className="section-title">{t("managerPlayers.bulkTitle")}</h3>
           <p className="mt-1 text-sm text-slate-400">
-            Paste a player list or upload a{" "}
+            {bulkHintBefore}
             <span className="font-semibold text-slate-300">
-              Playtomic export, CSV or text file
-            </span>{" "}
-            — one player per line; header rows are detected automatically.
+              {t("managerPlayers.bulkHintBold")}
+            </span>
+            {bulkHintAfter}
           </p>
           <div className="mt-4 space-y-3">
             <Textarea
@@ -280,8 +284,8 @@ export function PlayersManager({
                 setImportDone(null);
               }}
               rows={5}
-              placeholder={"Adam Kowalski\nMaria Nowak\n…"}
-              aria-label="Players to import"
+              placeholder={t("managerPlayers.importTextPlaceholder")}
+              aria-label={t("managerPlayers.bulkTitle")}
             />
             <input
               ref={fileRef}
@@ -289,17 +293,20 @@ export function PlayersManager({
               accept=".csv,.txt,text/csv,text/plain"
               onChange={(e) => onFile(e.target.files?.[0])}
               className="block w-full text-xs text-slate-400 file:mr-3 file:rounded-lg file:border-0 file:bg-white/10 file:px-3 file:py-1.5 file:text-xs file:font-semibold file:text-white hover:file:bg-white/15"
-              aria-label="Upload player file"
+              aria-label={t("managerPlayers.bulkTitle")}
             />
             {parsed.length > 0 && (
               <div className="rounded-xl border border-white/10 bg-white/[0.03] p-3">
                 <p className="text-xs font-semibold text-slate-300">
-                  Found {parsed.length} names ·{" "}
-                  <span className="text-volt-300">{parsedNew.length} new</span>
+                  {t("managerPlayers.foundNames", {
+                    count: parsed.length,
+                    new: parsedNew.length,
+                  })}
                   {parsed.length - parsedNew.length > 0 && (
                     <span className="text-slate-500">
-                      {" "}
-                      · {parsed.length - parsedNew.length} already in roster
+                      {t("managerPlayers.alreadyInRoster", {
+                        count: parsed.length - parsedNew.length,
+                      })}
                     </span>
                   )}
                 </p>
@@ -321,7 +328,9 @@ export function PlayersManager({
               className="w-full"
             >
               {importing && <Spinner className="h-3.5 w-3.5" />}
-              Add {parsedNew.length} new player{parsedNew.length === 1 ? "" : "s"}
+              {parsedNew.length === 1
+                ? t("managerPlayers.addNPlayers", { count: parsedNew.length })
+                : t("managerPlayers.addNPlayersPlural", { count: parsedNew.length })}
             </Button>
             <ErrorText>{importError}</ErrorText>
             {importDone && (
@@ -334,7 +343,7 @@ export function PlayersManager({
       <Modal
         open={editing !== null}
         onClose={() => !editSaving && setEditing(null)}
-        title="Edit player"
+        title={t("managerPlayers.editModalTitle")}
         footer={
           <>
             <Button
@@ -342,27 +351,27 @@ export function PlayersManager({
               onClick={() => setEditing(null)}
               disabled={editSaving}
             >
-              Cancel
+              {t("common.cancel")}
             </Button>
             <Button onClick={saveEdit} disabled={editSaving}>
               {editSaving && <Spinner className="h-3.5 w-3.5" />}
-              Save
+              {t("common.save")}
             </Button>
           </>
         }
       >
         <div className="space-y-3">
           <div>
-            <label className="label">Name</label>
+            <label className="label">{t("managerPlayers.nameLabel")}</label>
             <Input value={editName} onChange={(e) => setEditName(e.target.value)} />
           </div>
           <div>
-            <label className="label">Email</label>
+            <label className="label">{t("managerPlayers.emailLabel")}</label>
             <Input
               type="email"
               value={editEmail}
               onChange={(e) => setEditEmail(e.target.value)}
-              placeholder="Optional"
+              placeholder={t("common.optional")}
             />
           </div>
           <ErrorText>{editError}</ErrorText>
@@ -372,7 +381,7 @@ export function PlayersManager({
       <Modal
         open={deleting !== null}
         onClose={() => !deleteBusy && setDeleting(null)}
-        title={`Remove ${deleting?.name}?`}
+        title={t("managerPlayers.deleteModalTitle", { name: deleting?.name ?? "" })}
         footer={
           <>
             <Button
@@ -380,19 +389,17 @@ export function PlayersManager({
               onClick={() => setDeleting(null)}
               disabled={deleteBusy}
             >
-              Cancel
+              {t("common.cancel")}
             </Button>
             <Button variant="danger" onClick={confirmDelete} disabled={deleteBusy}>
               {deleteBusy && <Spinner className="h-3.5 w-3.5" />}
-              Remove player
+              {t("managerPlayers.removePlayer")}
             </Button>
           </>
         }
       >
         <p className="text-sm text-slate-300">
-          This removes{" "}
-          <span className="font-semibold text-white">{deleting?.name}</span> from
-          the roster. Their past tournament results and ranking points are kept.
+          {t("managerPlayers.deleteModalHint", { name: deleting?.name ?? "" })}
         </p>
         <ErrorText>{deleteError}</ErrorText>
       </Modal>

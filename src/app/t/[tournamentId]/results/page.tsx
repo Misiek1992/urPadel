@@ -7,9 +7,12 @@ import { serialize, type ClubJSON, type TournamentJSON } from "@/lib/types";
 import {
   computeStandings,
   roundPointsByEntrant,
-  typeLabel,
+  isTeamType,
   type EngineRound,
 } from "@/lib/engine";
+import { formatLabel } from "@/lib/i18n/formats";
+import { createT } from "@/lib/i18n";
+import { getLocale } from "@/lib/i18n/server";
 import { Badge, PageHeader } from "@/components/ui";
 import { cn } from "@/lib/cn";
 import { medalFor } from "@/components/public/StandingsTable";
@@ -24,6 +27,7 @@ export default async function ResultsPage({
 }) {
   const { tournamentId } = await params;
   if (!isValidObjectId(tournamentId)) notFound();
+  const t = createT(await getLocale());
   await dbConnect();
   const doc = await Tournament.findById(tournamentId).lean();
   if (!doc) notFound();
@@ -37,11 +41,13 @@ export default async function ResultsPage({
   const roundPoints = tournament.rounds.map((r) =>
     roundPointsByEntrant(r as EngineRound)
   );
+  const team = isTeamType(tournament.type);
+  const who = team ? t("resultsPage.whoTeam") : t("resultsPage.whoPlayer");
 
   return (
     <div className="space-y-10">
       <PageHeader
-        title={`${tournament.name} — results`}
+        title={`${tournament.name} — ${t("resultsPage.titleSuffix")}`}
         subtitle={
           <span className="flex flex-wrap items-center gap-2">
             {club && (
@@ -52,38 +58,40 @@ export default async function ResultsPage({
                 {club.name}
               </Link>
             )}
-            <Badge tone="blue">{typeLabel(tournament.type)}</Badge>
+            <Badge tone="blue">{formatLabel(t, tournament.type)}</Badge>
             {isActive ? (
-              <Badge tone="volt">Live — updates as scores come in</Badge>
+              <Badge tone="volt">{t("resultsPage.live")}</Badge>
             ) : (
               <Badge tone="slate">
-                Finished {formatDate(tournament.finishedAt ?? tournament.playedAt)}
+                {t("resultsPage.finished", {
+                  date: formatDate(tournament.finishedAt ?? tournament.playedAt),
+                })}
               </Badge>
             )}
           </span>
         }
         actions={
           <Link href={`/t/${tournament._id}`} className="btn btn-secondary btn-sm">
-            {isActive ? "Live view" : "Tournament page"}
+            {isActive ? t("resultsPage.liveView") : t("resultsPage.tournamentPage")}
           </Link>
         }
       />
 
       <section>
-        <h2 className="section-title mb-4">Round-by-round points</h2>
+        <h2 className="section-title mb-4">{t("resultsPage.roundByRound")}</h2>
         <div className="table-wrap">
           <table className="table-base">
             <thead>
               <tr>
-                <th className="w-12">#</th>
-                <th>{tournament.type.endsWith("-team") ? "Team" : "Player"}</th>
+                <th className="w-12">{t("clubPage.position")}</th>
+                <th>{team ? t("resultsPage.team") : t("resultsPage.player")}</th>
                 {tournament.rounds.map((r) => (
                   <th key={r.number} className="text-center">
                     R{r.number}
-                    {r.isFinal ? " 🏁" : ""}
+                    {r.isFinal ? t("resultsPage.finalBadge") : ""}
                   </th>
                 ))}
-                <th className="text-right">Total</th>
+                <th className="text-right">{t("resultsPage.total")}</th>
               </tr>
             </thead>
             <tbody>
@@ -139,20 +147,19 @@ export default async function ResultsPage({
           </table>
         </div>
         <p className="mt-2 text-xs text-slate-500">
-          Cells show rally points scored per round · “–” means the{" "}
-          {tournament.type.endsWith("-team") ? "team" : "player"} was resting or
-          the match is not played yet.
+          {t("resultsPage.cellHint", { who })}
         </p>
       </section>
 
       <section>
-        <h2 className="section-title mb-4">Every round in detail</h2>
+        <h2 className="section-title mb-4">{t("resultsPage.everyRoundDetail")}</h2>
         <div className="grid gap-4 lg:grid-cols-2">
           {tournament.rounds.map((r) => (
             <div key={r.number} className="card card-pad">
               <h3 className="mb-3 text-sm font-extrabold uppercase tracking-wide text-volt-300">
-                Round {r.number}
-                {r.isFinal && " — Final (seeded by ranking)"}
+                {r.isFinal
+                  ? t("resultsPage.finalRoundLabel", { number: r.number })
+                  : t("resultsPage.roundLabel", { number: r.number })}
               </h3>
               <table className="table-base">
                 <tbody>
@@ -174,7 +181,9 @@ export default async function ResultsPage({
                   ))}
                   {r.byes.length > 0 && (
                     <tr>
-                      <td className="text-xs text-slate-500">Resting</td>
+                      <td className="text-xs text-slate-500">
+                        {t("resultsPage.resting")}
+                      </td>
                       <td colSpan={3} className="text-xs text-slate-400">
                         {r.byes.map((id) => map[id]?.name ?? id).join(", ")}
                       </td>

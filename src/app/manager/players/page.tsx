@@ -2,6 +2,8 @@ import { getViewer } from "@/lib/auth";
 import { dbConnect } from "@/lib/db";
 import { ClubPlayer } from "@/lib/models";
 import { serialize, type ClubPlayerJSON } from "@/lib/types";
+import { createT } from "@/lib/i18n";
+import { getLocale } from "@/lib/i18n/server";
 import { PageHeader } from "@/components/ui";
 import { ManagerDenied, resolveActiveClub } from "@/components/manager/access";
 import { ManagerNav } from "@/components/manager/ManagerNav";
@@ -15,9 +17,10 @@ export default async function ManagerPlayersPage({
   searchParams: Promise<{ club?: string }>;
 }) {
   const viewer = await getViewer();
+  const t = createT(await getLocale());
   const { club: clubParam } = await searchParams;
   const activeClub = resolveActiveClub(viewer, clubParam);
-  if (!activeClub) return <ManagerDenied viewer={viewer} />;
+  if (!activeClub) return <ManagerDenied viewer={viewer} t={t} />;
 
   await dbConnect();
   const playersRaw = await ClubPlayer.find({ clubId: activeClub._id })
@@ -28,8 +31,8 @@ export default async function ManagerPlayersPage({
   return (
     <div>
       <PageHeader
-        title="Players"
-        subtitle={`The ${activeClub.name} roster — used for the ranking and as a quick-pick list when creating tournaments.`}
+        title={t("managerPlayers.title")}
+        subtitle={t("managerPlayers.subtitleFor", { club: activeClub.name })}
       />
       <div className="-mt-2 mb-8">
         <ManagerNav clubs={viewer.managedClubs} activeClubId={activeClub._id} />

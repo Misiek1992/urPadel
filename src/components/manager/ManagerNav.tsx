@@ -5,13 +5,7 @@
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
 import { Select, cn } from "@/components/ui";
-
-const TABS = [
-  { href: "/manager", label: "Dashboard" },
-  { href: "/manager/players", label: "Players" },
-  { href: "/manager/ranking", label: "Ranking" },
-  { href: "/manager/tournaments/new", label: "New tournament" },
-] as const;
+import { useT } from "@/components/i18n/LocaleProvider";
 
 export function ManagerNav({
   clubs,
@@ -22,6 +16,15 @@ export function ManagerNav({
 }) {
   const pathname = usePathname();
   const router = useRouter();
+  const t = useT();
+
+  const TABS = [
+    { href: "/manager", label: t("managerNav.dashboard") },
+    { href: "/manager/players", label: t("managerNav.players") },
+    { href: "/manager/ranking", label: t("managerNav.ranking") },
+    { href: "/manager/tournaments/new", label: t("managerNav.newTournament") },
+  ] as const;
+
   return (
     <div className="mt-4 flex flex-wrap items-center gap-3">
       <nav
@@ -54,7 +57,7 @@ export function ManagerNav({
         <Select
           value={activeClubId}
           onChange={(e) => router.push(`${pathname}?club=${e.target.value}`)}
-          aria-label="Switch club"
+          aria-label={t("managerNav.switchClub")}
           className="w-auto"
         >
           {clubs.map((club) => (

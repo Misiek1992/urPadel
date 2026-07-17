@@ -2,8 +2,10 @@ import Link from "next/link";
 import { dbConnect } from "@/lib/db";
 import { Club, ClubPlayer, Tournament } from "@/lib/models";
 import { serialize, type ClubJSON } from "@/lib/types";
-import { TOURNAMENT_TYPES } from "@/lib/engine";
-import { pointsForPosition } from "@/lib/ranking";
+import { pointsForPosition, RANKING_WINDOW_DAYS } from "@/lib/ranking";
+import { formatOptions } from "@/lib/i18n/formats";
+import { createT } from "@/lib/i18n";
+import { getLocale } from "@/lib/i18n/server";
 import { PadelMark } from "@/components/Logo";
 import { EmptyState } from "@/components/ui";
 
@@ -35,30 +37,9 @@ function CourtIllustration() {
   );
 }
 
-const HOW_IT_WORKS = [
-  {
-    step: "1",
-    title: "Pick your format",
-    text: "Americano, Mexicano or their team variants — with numbered or custom-named courts and your points per match.",
-  },
-  {
-    step: "2",
-    title: "Import players",
-    text: "Paste or upload a Playtomic export, CSV or plain list. Or pick straight from your club roster.",
-  },
-  {
-    step: "3",
-    title: "Play & score at the court",
-    text: "Every court gets its own live page — players enter the score the moment the match ends.",
-  },
-  {
-    step: "4",
-    title: "Rankings update themselves",
-    text: "Close the tournament and club ranking points land automatically: 100 for the win, down to 1 for showing up.",
-  },
-];
-
 export default async function LandingPage() {
+  const t = createT(await getLocale());
+
   await dbConnect();
   const clubsRaw = await Club.find({}).sort({ name: 1 }).limit(6).lean();
   const clubs = serialize<ClubJSON[]>(clubsRaw);
@@ -72,30 +53,33 @@ export default async function LandingPage() {
     })
   );
 
+  const howItWorks = [
+    { step: "1", title: t("home.how1Title"), text: t("home.how1Text") },
+    { step: "2", title: t("home.how2Title"), text: t("home.how2Text") },
+    { step: "3", title: t("home.how3Title"), text: t("home.how3Text") },
+    { step: "4", title: t("home.how4Title"), text: t("home.how4Text") },
+  ];
+
   return (
     <div className="space-y-20 pb-8">
       {/* Hero */}
       <section className="grid items-center gap-10 pt-6 lg:grid-cols-2">
         <div>
-          <span className="badge badge-volt mb-5">
-            Americano · Mexicano · Team formats
-          </span>
+          <span className="badge badge-volt mb-5">{t("home.badge")}</span>
           <h1 className="text-4xl font-extrabold leading-tight tracking-tight text-white sm:text-5xl">
-            Run unforgettable{" "}
-            <span className="text-volt-400">Americano</span> &{" "}
-            <span className="text-volt-400">Mexicano</span> nights
+            {t("home.titleLine1")}{" "}
+            <span className="text-volt-400">{t("home.titleAmericano")}</span>{" "}
+            {t("home.titleAnd")}{" "}
+            <span className="text-volt-400">{t("home.titleMexicano")}</span>{" "}
+            {t("home.titleLine2")}
           </h1>
-          <p className="mt-5 max-w-xl text-lg text-slate-400">
-            urPadel organizes the whole evening: automatic pairings, a live page
-            for every court, round-by-round results and a club ranking that
-            keeps players coming back all year.
-          </p>
+          <p className="mt-5 max-w-xl text-lg text-slate-400">{t("home.subtitle")}</p>
           <div className="mt-8 flex flex-wrap gap-3">
             <Link href="/clubs" className="btn btn-primary btn-lg">
-              Explore clubs
+              {t("home.exploreClubs")}
             </Link>
             <Link href="/manager" className="btn btn-secondary btn-lg">
-              Organize a tournament
+              {t("home.organizeTournament")}
             </Link>
           </div>
         </div>
@@ -109,31 +93,29 @@ export default async function LandingPage() {
         <div className="mb-6 flex items-center gap-3">
           <PadelMark size={26} />
           <h2 className="text-2xl font-extrabold text-white">
-            Four formats, one flow
+            {t("home.formatsHeading")}
           </h2>
         </div>
         <div className="grid gap-4 sm:grid-cols-2">
-          {TOURNAMENT_TYPES.map((t) => (
-            <div key={t.value} className="card card-pad">
-              <h3 className="text-lg font-bold text-volt-300">{t.label}</h3>
+          {formatOptions(t).map((f) => (
+            <div key={f.value} className="card card-pad">
+              <h3 className="text-lg font-bold text-volt-300">{f.label}</h3>
               <p className="mt-2 text-sm leading-relaxed text-slate-400">
-                {t.description}
+                {f.description}
               </p>
             </div>
           ))}
         </div>
-        <p className="mt-4 text-sm text-slate-500">
-          Every rally point counts towards the individual (or team) score — a
-          16–8 result gives the winners 16 points each and the losers 8. The
-          highest total wins the night.
-        </p>
+        <p className="mt-4 text-sm text-slate-500">{t("home.formatsFooter")}</p>
       </section>
 
       {/* How it works */}
       <section>
-        <h2 className="mb-6 text-2xl font-extrabold text-white">How it works</h2>
+        <h2 className="mb-6 text-2xl font-extrabold text-white">
+          {t("home.howItWorksHeading")}
+        </h2>
         <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
-          {HOW_IT_WORKS.map((item) => (
+          {howItWorks.map((item) => (
             <div key={item.step} className="card card-pad">
               <span className="flex h-9 w-9 items-center justify-center rounded-xl bg-volt-400 text-base font-extrabold text-navy-950">
                 {item.step}
@@ -152,15 +134,10 @@ export default async function LandingPage() {
         <div className="grid items-center gap-8 lg:grid-cols-2">
           <div>
             <h2 className="text-2xl font-extrabold text-white">
-              A club ranking players actually care about
+              {t("home.rankingHeading")}
             </h2>
             <p className="mt-3 text-sm leading-relaxed text-slate-400">
-              Every finished tournament feeds the club ranking automatically:
-              100 points for the winner, 90 for second, down to 10 for tenth —
-              and 1 point just for playing. Points stay on the board for{" "}
-              <span className="font-semibold text-volt-300">365 days</span>, so
-              the ranking always reflects the last year of padel. Club managers
-              can adjust points at any time.
+              {t("home.rankingText", { days: RANKING_WINDOW_DAYS })}
             </p>
           </div>
           <div className="flex flex-wrap items-end justify-center gap-2">
@@ -176,14 +153,14 @@ export default async function LandingPage() {
                   {pointsForPosition(pos)}
                 </span>
                 <span className="mb-3 text-[11px] uppercase tracking-wider text-slate-500">
-                  points
+                  {t("home.pointsLabel")}
                 </span>
               </div>
             ))}
             <div className="flex h-16 w-24 flex-col items-center justify-end rounded-t-2xl border border-white/10 bg-white/[0.03]">
               <span className="text-xl font-extrabold text-slate-400">1</span>
               <span className="mb-2 text-[11px] uppercase tracking-wider text-slate-500">
-                for playing
+                {t("home.participationLabel")}
               </span>
             </div>
           </div>
@@ -193,16 +170,13 @@ export default async function LandingPage() {
       {/* Clubs */}
       <section>
         <div className="mb-6 flex flex-wrap items-center justify-between gap-3">
-          <h2 className="text-2xl font-extrabold text-white">Clubs on urPadel</h2>
+          <h2 className="text-2xl font-extrabold text-white">{t("home.clubsHeading")}</h2>
           <Link href="/clubs" className="text-sm font-semibold text-volt-300 hover:text-volt-400">
-            All clubs →
+            {t("home.allClubs")}
           </Link>
         </div>
         {clubStats.length === 0 ? (
-          <EmptyState
-            title="No clubs yet"
-            hint="A super admin can create the first club in the admin panel."
-          />
+          <EmptyState title={t("home.noClubsTitle")} hint={t("home.noClubsHint")} />
         ) : (
           <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
             {clubStats.map(({ club, players, tournaments }) => (
@@ -224,9 +198,9 @@ export default async function LandingPage() {
                 )}
                 <p className="mt-4 text-xs text-slate-500">
                   <span className="font-semibold text-volt-300">{players}</span>{" "}
-                  players ·{" "}
+                  {t("home.playersCount")} ·{" "}
                   <span className="font-semibold text-volt-300">{tournaments}</span>{" "}
-                  tournaments
+                  {t("home.tournamentsCount")}
                 </p>
               </Link>
             ))}

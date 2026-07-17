@@ -2,6 +2,8 @@ import { getViewer } from "@/lib/auth";
 import { dbConnect } from "@/lib/db";
 import { Club, ClubPlayer, Tournament } from "@/lib/models";
 import { serialize, type ClubJSON } from "@/lib/types";
+import { createT } from "@/lib/i18n";
+import { getLocale } from "@/lib/i18n/server";
 import { SuperAdminDenied } from "@/components/superadmin/AccessGate";
 import { ClubsManager } from "@/components/superadmin/ClubsManager";
 
@@ -9,8 +11,9 @@ export const dynamic = "force-dynamic";
 
 export default async function SuperAdminClubsPage() {
   const viewer = await getViewer();
+  const t = createT(await getLocale());
   if (!viewer.isSuperAdmin) {
-    return <SuperAdminDenied email={viewer.email} />;
+    return <SuperAdminDenied email={viewer.email} t={t} />;
   }
 
   await dbConnect();
@@ -33,11 +36,8 @@ export default async function SuperAdminClubsPage() {
   return (
     <div>
       <div className="mb-6">
-        <h2 className="section-title">Clubs</h2>
-        <p className="mt-1 text-sm text-slate-400">
-          Create clubs and assign manager emails — managers get access to the
-          club manager panel the moment they sign in with that email.
-        </p>
+        <h2 className="section-title">{t("superadminClubs.title")}</h2>
+        <p className="mt-1 text-sm text-slate-400">{t("superadminClubs.subtitle")}</p>
       </div>
       <ClubsManager
         clubs={clubs}

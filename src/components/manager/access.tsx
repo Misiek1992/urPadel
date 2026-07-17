@@ -1,18 +1,26 @@
 // Access gating for /manager pages: polite empty states, never a crash.
+// `t` is passed in (not read via a hook) so this works from Server Components.
 
 import Link from "next/link";
 import { EmptyState } from "@/components/ui";
 import type { ViewerJSON } from "@/lib/types";
+import type { Translator } from "@/lib/i18n";
 
-export function ManagerDenied({ viewer }: { viewer: ViewerJSON }) {
+export function ManagerDenied({
+  viewer,
+  t,
+}: {
+  viewer: ViewerJSON;
+  t: Translator;
+}) {
   if (!viewer.email) {
     return (
       <EmptyState
-        title="Sign in required"
-        hint="The club manager panel is available to signed-in club managers."
+        title={t("managerDashboard.deniedSignInTitle")}
+        hint={t("managerDashboard.deniedSignInHint")}
         action={
           <Link href="/sign-in" className="btn btn-primary">
-            Sign in
+            {t("nav.signIn")}
           </Link>
         }
       />
@@ -20,11 +28,11 @@ export function ManagerDenied({ viewer }: { viewer: ViewerJSON }) {
   }
   return (
     <EmptyState
-      title="No club assigned to your account"
-      hint={`You are signed in as ${viewer.email}, but this email is not a manager of any club yet. Ask a super admin to assign your email to your club.`}
+      title={t("managerDashboard.deniedNoClubTitle")}
+      hint={t("managerDashboard.deniedNoClubHint", { email: viewer.email })}
       action={
         <Link href="/clubs" className="btn btn-secondary">
-          Browse clubs
+          {t("managerDashboard.browseClubs")}
         </Link>
       }
     />

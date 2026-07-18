@@ -17,6 +17,7 @@ import { Badge, PageHeader } from "@/components/ui";
 import { cn } from "@/lib/cn";
 import { medalFor } from "@/components/public/StandingsTable";
 import { entrantMap, formatDate, sideNames } from "@/components/public/helpers";
+import { ExportResults } from "@/components/public/ExportResults";
 
 export const dynamic = "force-dynamic";
 
@@ -43,6 +44,31 @@ export default async function ResultsPage({
   );
   const team = isTeamType(tournament.type);
   const who = team ? t("resultsPage.whoTeam") : t("resultsPage.whoPlayer");
+
+  const exportRows = standings.map((row, i) => ({
+    position: i + 1,
+    name: row.name,
+    players: row.players,
+    roundPoints: tournament.rounds.map(
+      (_, ri) => roundPoints[ri].get(row.entrantId) ?? null
+    ),
+    total: row.points,
+  }));
+  const exportSubtitle = [
+    club?.name,
+    formatDate(tournament.finishedAt ?? tournament.playedAt),
+    formatLabel(t, tournament.type),
+    t("tournamentPage.pointsPerMatch", { points: tournament.matchPoints }),
+  ]
+    .filter(Boolean)
+    .join("  ·  ");
+  const fileBase =
+    tournament.name
+      .toLowerCase()
+      .normalize("NFKD")
+      .replace(/[̀-ͯ]/g, "")
+      .replace(/[^a-z0-9]+/g, "-")
+      .replace(/^-+|-+$/g, "") || "tournament";
 
   return (
     <div className="space-y-10">
@@ -76,6 +102,24 @@ export default async function ResultsPage({
           </Link>
         }
       />
+
+      {!isActive && (
+        <ExportResults
+          title={tournament.name}
+          subtitle={exportSubtitle}
+          roundLabels={tournament.rounds.map(
+            (r) => `R${r.number}${r.isFinal ? " 🏁" : ""}`
+          )}
+          rows={exportRows}
+          labels={{
+            position: "#",
+            player: team ? t("resultsPage.team") : t("resultsPage.player"),
+            total: t("resultsPage.total"),
+          }}
+          fileBase={`${fileBase}-results`}
+          resultsPath={`/t/${tournament._id}/results`}
+        />
+      )}
 
       <section>
         <h2 className="section-title mb-4">{t("resultsPage.roundByRound")}</h2>

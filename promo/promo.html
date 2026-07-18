@@ -66,6 +66,8 @@
   p.pagelead { font-size: 11.5pt; color: var(--slate-400); max-width: 175mm; line-height: 1.5; }
   .shots { display: flex; gap: 8mm; margin-top: 8mm; flex: 1; align-items: flex-start; }
   .shotbox { flex: 1; min-width: 0; }
+  .shots.single { justify-content: center; }
+  .shots.single .shotbox { flex: 0 1 auto; width: 160mm; max-width: 100%; }
   .shot {
     width: 100%;
     border-radius: 4mm;
@@ -192,7 +194,7 @@
   <h2 class="pagetitle">Everything a padel night needs, in one place</h2>
   <p class="pagelead">Clubs organize, players score, rankings update themselves. Four tournament
      formats, a smart pairing engine, and a public page for every club, tournament and court.</p>
-  <div class="shots">
+  <div class="shots single">
     <div class="shotbox">
       <img class="shot" src="screenshots/landing.jpg" alt="Landing page" />
       <div class="caption">
@@ -236,7 +238,7 @@
   <p class="pagelead">Tick players from the club roster, quick-add a name, or paste / upload a
      Playtomic export, CSV or plain list — header rows and duplicates are handled automatically.
      Team formats add a pair builder with one-click shuffle.</p>
-  <div class="shots">
+  <div class="shots single">
     <div class="shotbox">
       <img class="shot" src="screenshots/wizard-3-players.jpg" alt="Wizard — players and import" />
       <div class="caption">
@@ -281,7 +283,7 @@
   <p class="pagelead">The fullscreen court view is built for a TV or laptop at the club: every court
      with giant score inputs, next-round and final-round controls, and a live ranking popup —
      nothing else on screen.</p>
-  <div class="shots">
+  <div class="shots single">
     <div class="shotbox">
       <img class="shot" src="screenshots/presenter.jpg" alt="Fullscreen presenter view" />
       <div class="caption">

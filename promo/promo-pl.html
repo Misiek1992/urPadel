@@ -1,0 +1,452 @@
+<!DOCTYPE html>
+<html lang="pl">
+<head>
+<meta charset="utf-8" />
+<title>urPadel — materiał promocyjny</title>
+<style>
+  :root {
+    --navy-950: #050b17;
+    --navy-900: #0a1425;
+    --navy-850: #0d1a30;
+    --navy-800: #12213d;
+    --volt-300: #eaff8f;
+    --volt-400: #d9f954;
+    --volt-500: #c3e830;
+    --ocean-400: #4aa8ff;
+    --slate-300: #cbd5e1;
+    --slate-400: #94a3b8;
+    --slate-500: #64748b;
+  }
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  @page { size: A4 landscape; margin: 0; }
+  html, body { background: var(--navy-950); }
+  body {
+    font-family: "Avenir Next", "Helvetica Neue", ui-sans-serif, system-ui, -apple-system, sans-serif;
+    color: var(--slate-300);
+    -webkit-print-color-adjust: exact;
+    print-color-adjust: exact;
+  }
+  .page {
+    position: relative;
+    width: 297mm;
+    height: 210mm;
+    overflow: hidden;
+    page-break-after: always;
+    background:
+      radial-gradient(900px 420px at 88% -8%, rgba(217, 249, 84, 0.08), transparent 60%),
+      radial-gradient(760px 420px at -6% 20%, rgba(47, 125, 225, 0.13), transparent 55%),
+      var(--navy-950);
+    padding: 16mm 18mm;
+    display: flex;
+    flex-direction: column;
+  }
+  .page:last-child { page-break-after: auto; }
+
+  .eyebrow {
+    display: inline-block;
+    font-size: 8.5pt;
+    font-weight: 700;
+    letter-spacing: 0.14em;
+    text-transform: uppercase;
+    color: var(--volt-300);
+    background: rgba(217, 249, 84, 0.12);
+    border: 1px solid rgba(217, 249, 84, 0.25);
+    border-radius: 999px;
+    padding: 2mm 5mm;
+    margin-bottom: 6mm;
+  }
+  h2.pagetitle {
+    font-size: 26pt;
+    font-weight: 800;
+    letter-spacing: -0.01em;
+    color: #fff;
+    margin-bottom: 3mm;
+  }
+  p.pagelead { font-size: 11.5pt; color: var(--slate-400); max-width: 175mm; line-height: 1.5; }
+  .shots { display: flex; gap: 8mm; margin-top: 8mm; flex: 1; align-items: flex-start; }
+  .shotbox { flex: 1; min-width: 0; }
+  .shots.single { justify-content: center; }
+  .shots.single .shotbox { flex: 0 1 auto; width: 160mm; max-width: 100%; }
+  .shot {
+    width: 100%;
+    border-radius: 4mm;
+    border: 1px solid rgba(255, 255, 255, 0.14);
+    box-shadow: 0 6mm 14mm rgba(0, 0, 0, 0.55), 0 0 0 1px rgba(217, 249, 84, 0.06);
+    display: block;
+  }
+  .caption { margin-top: 4mm; }
+  .caption b { display: block; color: #fff; font-size: 11pt; margin-bottom: 1.2mm; }
+  .caption span { font-size: 9.5pt; color: var(--slate-400); line-height: 1.45; display: block; }
+  .stepnum {
+    display: inline-block; text-align: center;
+    width: 7mm; height: 7mm; line-height: 7mm; border-radius: 2.2mm;
+    background: var(--volt-400); color: #0a1425;
+    font-weight: 800; font-size: 10.5pt; margin-right: 3mm; vertical-align: middle;
+  }
+  .pagefoot {
+    position: absolute; bottom: 8mm; left: 18mm; right: 18mm;
+    display: flex; justify-content: space-between; align-items: center;
+    font-size: 8pt; color: var(--slate-500);
+  }
+  .pagefoot .url { color: var(--volt-300); font-weight: 600; }
+
+  .cover { align-items: center; justify-content: center; text-align: center; }
+  .cover .mark { margin-bottom: 8mm; }
+  .cover h1 { font-size: 52pt; font-weight: 800; letter-spacing: -0.02em; color: #fff; }
+  .cover h1 .ur { color: var(--volt-400); }
+  .cover .tagline { font-size: 17pt; color: #fff; font-weight: 600; margin-top: 5mm; }
+  .cover .tagline .hl { color: var(--volt-400); }
+  .cover .sub { font-size: 11.5pt; color: var(--slate-400); margin-top: 4mm; max-width: 170mm; line-height: 1.55; }
+  .urlpill {
+    display: inline-block; margin-top: 10mm;
+    background: var(--volt-400); color: var(--navy-950);
+    font-weight: 800; font-size: 13pt;
+    padding: 4mm 10mm; border-radius: 999px;
+  }
+  .cover .credits { position: absolute; bottom: 12mm; font-size: 9pt; color: var(--slate-500); }
+
+  .featcols { display: flex; gap: 10mm; margin-top: 7mm; flex: 1; }
+  .featcol { flex: 1; }
+  .featgroup { margin-bottom: 5.5mm; }
+  .featgroup h3 {
+    font-size: 10pt; font-weight: 800; text-transform: uppercase; letter-spacing: 0.1em;
+    color: var(--volt-300); margin-bottom: 2.6mm;
+  }
+  .featgroup ul { list-style: none; }
+  .featgroup li {
+    font-size: 9.4pt; color: var(--slate-300); line-height: 1.38;
+    padding-left: 6mm; position: relative; margin-bottom: 1.9mm;
+  }
+  .featgroup li::before {
+    content: "◆"; position: absolute; left: 0; top: 0.2mm;
+    color: var(--volt-400); font-size: 7.5pt;
+  }
+  .featgroup li b { color: #fff; }
+
+  .stackgrid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 6mm; margin-top: 8mm; }
+  .stackcard {
+    background: rgba(255, 255, 255, 0.045);
+    border: 1px solid rgba(255, 255, 255, 0.11);
+    border-radius: 4mm; padding: 6mm 7mm;
+  }
+  .stackcard b { display: block; color: var(--volt-300); font-size: 12pt; margin-bottom: 1.6mm; }
+  .stackcard span { font-size: 9.3pt; color: var(--slate-400); line-height: 1.45; display: block; }
+  .quality {
+    margin-top: 7mm; background: rgba(217, 249, 84, 0.07);
+    border: 1px solid rgba(217, 249, 84, 0.22); border-radius: 4mm; padding: 5.5mm 7mm;
+  }
+  .quality b { color: #fff; font-size: 10.5pt; display: block; margin-bottom: 1.6mm; }
+  .quality span { font-size: 9.3pt; color: var(--slate-400); line-height: 1.5; }
+
+  .back { align-items: center; justify-content: center; text-align: center; }
+  .back h2 { font-size: 36pt; font-weight: 800; color: #fff; letter-spacing: -0.01em; }
+  .back h2 .hl { color: var(--volt-400); }
+  .back .sub { margin-top: 4mm; font-size: 12pt; color: var(--slate-400); }
+  .contact { margin-top: 12mm; font-size: 10.5pt; color: var(--slate-400); line-height: 1.8; }
+  .contact b { color: #fff; }
+  .contact a { color: var(--volt-300); text-decoration: none; font-weight: 700; }
+</style>
+</head>
+<body>
+
+<!-- ============ 1 · OKŁADKA ============ -->
+<section class="page cover">
+  <div class="mark">
+    <svg width="150" height="150" viewBox="0 0 48 48" fill="none" xmlns="http://www.w3.org/2000/svg">
+      <defs>
+        <linearGradient id="r" x1="0" y1="0" x2="1" y2="1">
+          <stop offset="0" stop-color="#eaff8f"/><stop offset="1" stop-color="#c3e830"/>
+        </linearGradient>
+        <linearGradient id="b" x1="0" y1="0" x2="1" y2="1">
+          <stop offset="0" stop-color="#7cc4ff"/><stop offset="1" stop-color="#2f7de1"/>
+        </linearGradient>
+      </defs>
+      <g transform="rotate(-24 21 20)">
+        <rect x="8" y="1" width="26" height="33" rx="13" fill="url(#r)"/>
+        <g fill="#0a1425">
+          <circle cx="16" cy="11" r="1.7"/><circle cx="21" cy="11" r="1.7"/><circle cx="26" cy="11" r="1.7"/>
+          <circle cx="16" cy="17" r="1.7"/><circle cx="21" cy="17" r="1.7"/><circle cx="26" cy="17" r="1.7"/>
+          <circle cx="16" cy="23" r="1.7"/><circle cx="21" cy="23" r="1.7"/><circle cx="26" cy="23" r="1.7"/>
+        </g>
+        <rect x="18" y="33" width="6" height="12" rx="3" fill="url(#r)"/>
+      </g>
+      <circle cx="38" cy="38" r="6.5" fill="url(#b)"/>
+      <path d="M33.5 35.6a6.5 6.5 0 0 1 9 0" stroke="#0a1425" stroke-width="1.3" fill="none"/>
+      <path d="M33.5 40.4a6.5 6.5 0 0 0 9 0" stroke="#0a1425" stroke-width="1.3" fill="none"/>
+    </svg>
+  </div>
+  <h1><span class="ur">ur</span>Padel</h1>
+  <p class="tagline">Organizuj niezapomniane turnieje <span class="hl">Americano</span> i <span class="hl">Mexicano</span></p>
+  <p class="sub">Kompletna platforma do towarzyskich turniejów padla — automatyczne pary,
+     wyniki na żywo na każdym korcie i ranking klubowy, dzięki któremu gracze wracają przez cały rok.</p>
+  <div class="urlpill">ur-padel-ten.vercel.app</div>
+  <p class="credits">Autor: Michał Ignaczak · m.ignaczak.92@gmail.com</p>
+</section>
+
+<!-- ============ 2 · PRZEGLĄD ============ -->
+<section class="page">
+  <div><span class="eyebrow">Jedna platforma, cały turniej</span></div>
+  <h2 class="pagetitle">Wszystko, czego potrzebuje turniej padla — w jednym miejscu</h2>
+  <p class="pagelead">Kluby organizują, gracze wpisują wyniki, ranking aktualizuje się sam. Cztery
+     formaty turniejowe, inteligentny silnik par i publiczna strona każdego klubu, turnieju i kortu.</p>
+  <div class="shots single">
+    <div class="shotbox">
+      <img class="shot" src="screenshots-pl/landing.jpg" alt="Strona główna" />
+      <div class="caption">
+        <b>Cztery formaty, jeden proces</b>
+        <span>Americano, Mexicano i ich warianty drużynowe — każdy zdobyty punkt liczy się do wyniku
+        indywidualnego (lub drużynowego), a najwyższa suma wygrywa turniej.</span>
+      </div>
+    </div>
+  </div>
+  <div class="pagefoot"><span>urPadel — materiał promocyjny</span><span class="url">ur-padel-ten.vercel.app</span></div>
+</section>
+
+<!-- ============ 3 · KREATOR 1-2 ============ -->
+<section class="page">
+  <div><span class="eyebrow">Utwórz turniej w kilka minut</span></div>
+  <h2 class="pagetitle">Pięć kroków, które poprowadzi każdy</h2>
+  <div class="shots">
+    <div class="shotbox">
+      <img class="shot" src="screenshots-pl/wizard-1-format.jpg" alt="Kreator — format" />
+      <div class="caption">
+        <b><span class="stepnum">1</span>Wybierz format</b>
+        <span>Americano, Mexicano, Americano Drużynowe lub Mexicano Drużynowe — każdy opisany
+        bezpośrednio na karcie.</span>
+      </div>
+    </div>
+    <div class="shotbox">
+      <img class="shot" src="screenshots-pl/wizard-2-basics.jpg" alt="Kreator — podstawy" />
+      <div class="caption">
+        <b><span class="stepnum">2</span>Nazwij i ustaw punkty</b>
+        <span>21, 24, 32 lub dowolna własna liczba punktów w meczu — z podglądem tego, jak może
+        wyglądać końcowy wynik.</span>
+      </div>
+    </div>
+  </div>
+  <div class="pagefoot"><span>urPadel — materiał promocyjny</span><span class="url">ur-padel-ten.vercel.app</span></div>
+</section>
+
+<!-- ============ 4 · KREATOR 3 ============ -->
+<section class="page">
+  <div><span class="eyebrow">Utwórz turniej w kilka minut</span></div>
+  <h2 class="pagetitle">Gracze w kilka sekund — prosto z Playtomic</h2>
+  <p class="pagelead">Zaznacz graczy z listy klubu, dodaj nazwisko ręcznie albo wklej / wgraj eksport
+     z Playtomic, plik CSV lub zwykłą listę — wiersze nagłówkowe i duplikaty są rozpoznawane
+     automatycznie. Formaty drużynowe dodają kreator par z losowaniem jednym kliknięciem.</p>
+  <div class="shots single">
+    <div class="shotbox">
+      <img class="shot" src="screenshots-pl/wizard-3-players.jpg" alt="Kreator — gracze i import" />
+      <div class="caption">
+        <b><span class="stepnum">3</span>Wybierz i zaimportuj graczy</b>
+        <span>Lista wybranych pokazuje liczbę graczy na żywo i ostrzega o nierównych grupach — pauzy
+        rotują sprawiedliwie, więc zadziała każda liczba uczestników.</span>
+      </div>
+    </div>
+  </div>
+  <div class="pagefoot"><span>urPadel — materiał promocyjny</span><span class="url">ur-padel-ten.vercel.app</span></div>
+</section>
+
+<!-- ============ 5 · KREATOR 4-5 ============ -->
+<section class="page">
+  <div><span class="eyebrow">Utwórz turniej w kilka minut</span></div>
+  <h2 class="pagetitle">Korty, podsumowanie — gramy</h2>
+  <div class="shots">
+    <div class="shotbox">
+      <img class="shot" src="screenshots-pl/wizard-4-courts.jpg" alt="Kreator — korty" />
+      <div class="caption">
+        <b><span class="stepnum">4</span>Wybierz korty</b>
+        <span>Numerowane korty z inteligentną podpowiedzią albo własne nazwy, np. „Kort Centralny”
+        i „Panorama”.</span>
+      </div>
+    </div>
+    <div class="shotbox">
+      <img class="shot" src="screenshots-pl/wizard-5-review.jpg" alt="Kreator — podsumowanie" />
+      <div class="caption">
+        <b><span class="stepnum">5</span>Podsumuj i wystartuj</b>
+        <span>Runda 1 generuje się w momencie startu — zoptymalizowany rozkład minimalizujący
+        powtarzających się partnerów i przeciwników (Mexicano zaczyna od losowania).</span>
+      </div>
+    </div>
+  </div>
+  <div class="pagefoot"><span>urPadel — materiał promocyjny</span><span class="url">ur-padel-ten.vercel.app</span></div>
+</section>
+
+<!-- ============ 6 · WIDOK KORTÓW ============ -->
+<section class="page">
+  <div><span class="eyebrow">Prowadź na żywo</span></div>
+  <h2 class="pagetitle">Jeden wielki ekran na całą rundę</h2>
+  <p class="pagelead">Pełnoekranowy widok kortów stworzony na telewizor lub laptop w klubie: wszystkie
+     korty z wielkimi polami wyników, sterowanie rundami i podręczny ranking — nic więcej na ekranie.</p>
+  <div class="shots single">
+    <div class="shotbox">
+      <img class="shot" src="screenshots-pl/presenter.jpg" alt="Pełnoekranowy widok kortów" />
+      <div class="caption">
+        <b>Pełnoekranowy widok kortów</b>
+        <span>Rozegrane mecze świecą na limonkowo, trwające pulsują na niebiesko. Runda finałowa
+        dobierana jest wg klasyfikacji: 1. i 2. vs 3. i 4.</span>
+      </div>
+    </div>
+  </div>
+  <div class="pagefoot"><span>urPadel — materiał promocyjny</span><span class="url">ur-padel-ten.vercel.app</span></div>
+</section>
+
+<!-- ============ 7 · KORT + NA ŻYWO ============ -->
+<section class="page">
+  <div><span class="eyebrow">Prowadź na żywo</span></div>
+  <h2 class="pagetitle">Każdy kort ma własną stronę</h2>
+  <div class="shots">
+    <div class="shotbox">
+      <img class="shot" src="screenshots-pl/court-page.jpg" alt="Strona kortu" />
+      <div class="caption">
+        <b>Tablet przy korcie</b>
+        <span>Gracze wpisują wynik zaraz po zakończeniu meczu — z walidacją, dzięki której obie strony
+        zawsze sumują się do limitu punktów. Strona sama przechodzi do kolejnej rundy.</span>
+      </div>
+    </div>
+    <div class="shotbox">
+      <img class="shot" src="screenshots-pl/live-tournament.jpg" alt="Strona turnieju na żywo" />
+      <div class="caption">
+        <b>Publiczna strona na żywo</b>
+        <span>Każdy może śledzić turniej: bieżąca runda po kortach, klasyfikacja na żywo i pełna
+        historia rund — bez logowania.</span>
+      </div>
+    </div>
+  </div>
+  <div class="pagefoot"><span>urPadel — materiał promocyjny</span><span class="url">ur-padel-ten.vercel.app</span></div>
+</section>
+
+<!-- ============ 8 · WYNIKI + RANKING ============ -->
+<section class="page">
+  <div><span class="eyebrow">Po ostatniej piłce</span></div>
+  <h2 class="pagetitle">Wyniki i ranking, który ma znaczenie</h2>
+  <div class="shots">
+    <div class="shotbox">
+      <img class="shot" src="screenshots-pl/results.jpg" alt="Tabela wyników" />
+      <div class="caption">
+        <b>Tabela wyników runda po rundzie</b>
+        <span>Każdy gracz, każda runda, jedna tabela — dla każdego turnieju, na żywo i po zamknięciu.</span>
+      </div>
+    </div>
+    <div class="shotbox">
+      <img class="shot" src="screenshots-pl/club-ranking.jpg" alt="Ranking klubu" />
+      <div class="caption">
+        <b>Roczny ranking klubowy</b>
+        <span>100 punktów za zwycięstwo, do 10 za dziesiąte miejsce i 1 za udział — punkty ważne przez
+        365 dni, z ręcznymi korektami menedżerów.</span>
+      </div>
+    </div>
+  </div>
+  <div class="pagefoot"><span>urPadel — materiał promocyjny</span><span class="url">ur-padel-ten.vercel.app</span></div>
+</section>
+
+<!-- ============ 9 · FUNKCJE ============ -->
+<section class="page">
+  <div><span class="eyebrow">Przegląd funkcji</span></div>
+  <h2 class="pagetitle">Wszystko na pokładzie</h2>
+  <div class="featcols">
+    <div class="featcol">
+      <div class="featgroup">
+        <h3>Formaty i silnik</h3>
+        <ul>
+          <li><b>Cztery formaty</b> — Americano, Mexicano, Americano Drużynowe, Mexicano Drużynowe</li>
+          <li><b>Inteligentny silnik par</b> — minimalizuje powtarzających się partnerów i przeciwników; idealna rotacja, gdy istnieje</li>
+          <li><b>Dobieranie Mexicano</b> — 1. i 2. vs 3. i 4., co rundę, wg aktualnej klasyfikacji</li>
+          <li><b>Runda finałowa wg rankingu</b> w każdym formacie</li>
+          <li><b>Sprawiedliwe pauzy</b> — rotują automatycznie przy dowolnej liczbie graczy</li>
+          <li><b>Konfigurowalne punkty meczu</b> — 16 / 21 / 24 / 32 / własne</li>
+        </ul>
+      </div>
+      <div class="featgroup">
+        <h3>Organizacja</h3>
+        <ul>
+          <li><b>Kreator w pięciu krokach</b> z walidacją i ostrzeżeniami na żywo</li>
+          <li><b>Import graczy</b> — eksporty Playtomic, CSV lub zwykły tekst</li>
+          <li><b>Szybki wybór z listy klubu</b> + kreator drużyn z losowaniem</li>
+          <li><b>Korty po Twojemu</b> — numerowane lub z własnymi nazwami</li>
+          <li><b>Obsługa wielu klubów</b> z jawnym wyborem klubu</li>
+        </ul>
+      </div>
+    </div>
+    <div class="featcol">
+      <div class="featgroup">
+        <h3>Gra na żywo</h3>
+        <ul>
+          <li><b>Strona dla każdego kortu</b> — wpisywanie wyników na tablecie przy siatce</li>
+          <li><b>Pełnoekranowy widok kortów</b> — wszystkie korty, sterowanie rundami, ranking</li>
+          <li><b>Walidowane publiczne wyniki</b> — sumy zawsze zgadzają się z limitem punktów</li>
+          <li><b>Klasyfikacja na żywo</b> z automatycznym odświeżaniem</li>
+          <li><b>Poprawki menedżera</b> w dowolnej rundzie, w każdej chwili</li>
+        </ul>
+      </div>
+      <div class="featgroup">
+        <h3>Wyniki i rankingi</h3>
+        <ul>
+          <li><b>Tabela wyników</b> — każdy gracz × każda runda, dla każdego turnieju</li>
+          <li><b>Ranking klubowy</b> — 100/90/…/10 pkt + 1 za udział</li>
+          <li><b>Okno 365 dni</b> — zawsze ostatni rok padla</li>
+          <li><b>Edytowalne wpisy</b> i ręczne korekty punktów</li>
+        </ul>
+      </div>
+    </div>
+    <div class="featcol">
+      <div class="featgroup">
+        <h3>Kluby i role</h3>
+        <ul>
+          <li><b>Publiczne strony klubów</b> — turnieje, wyniki, ranking</li>
+          <li><b>Panel menedżera klubu</b> — zawodnicy, ranking, sterowanie turniejem</li>
+          <li><b>Panel super admina</b> — kluby, przypisywanie menedżerów z wyszukiwaniem użytkowników, konta adminów</li>
+          <li><b>Pełny dziennik aktywności</b> — każda akcja zapisana i filtrowalna</li>
+          <li><b>Bezpieczne logowanie</b> z Clerk</li>
+        </ul>
+      </div>
+      <div class="featgroup">
+        <h3>Doświadczenie</h3>
+        <ul>
+          <li><b>Polski i angielski</b> — jedno kliknięcie, łącznie z ekranami logowania</li>
+          <li><b>Nowoczesny ciemny interfejs</b> — granat i limonka, spójny wszędzie</li>
+          <li><b>Responsywność</b> — telefon, tablet, laptop, telewizor w klubie</li>
+          <li><b>Klub demo w zestawie</b> — 18 graczy, rozegrane turnieje, aktualny ranking</li>
+        </ul>
+      </div>
+    </div>
+  </div>
+  <div class="pagefoot"><span>urPadel — materiał promocyjny</span><span class="url">ur-padel-ten.vercel.app</span></div>
+</section>
+
+<!-- ============ 10 · TECHNOLOGIE ============ -->
+<section class="page">
+  <div><span class="eyebrow">Pod maską</span></div>
+  <h2 class="pagetitle">Nowoczesny, produkcyjny stack</h2>
+  <div class="stackgrid">
+    <div class="stackcard"><b>Next.js 15</b><span>App Router z React Server Components — każda strona renderowana świeżo na serwerze, API i interfejs w jednym kodzie.</span></div>
+    <div class="stackcard"><b>React 19 + TypeScript</b><span>Ścisły TypeScript od silnika turniejowego po każdy ekran.</span></div>
+    <div class="stackcard"><b>Tailwind CSS v4</b><span>Autorski system projektowy granat–limonka: jeden wygląd stron publicznych, paneli i widoku kortów.</span></div>
+    <div class="stackcard"><b>Clerk</b><span>Bezpieczne uwierzytelnianie z rolami — super admini, menedżerowie klubów, gracze — po polsku i angielsku.</span></div>
+    <div class="stackcard"><b>MongoDB Atlas + Mongoose</b><span>Chmurowa baza danych: kluby, zawodnicy, turnieje z pełną historią rund, rankingi i dziennik aktywności.</span></div>
+    <div class="stackcard"><b>Vercel</b><span>Wdrożenie globalne w sieci Vercel — aplikacja, o której czytasz, działa właśnie teraz.</span></div>
+  </div>
+  <div class="quality">
+    <b>Zbudowane, by mu ufać</b>
+    <span>Silnik par walidowany automatycznymi symulacjami (idealna rotacja partnerów, sprawiedliwe
+    pauzy, poprawne dobieranie Mexicano) · przepływy interfejsu weryfikowane automatyzacją przeglądarki
+    Playwright — to ona wykonała zrzuty ekranu w tym dokumencie · zależności załatane zgodnie
+    z najnowszymi biuletynami bezpieczeństwa (m.in. CVE-2025-66478) · każda zmiana sprawdzana pod
+    kątem uprawnień i zapisywana w dzienniku aktywności.</span>
+  </div>
+  <div class="pagefoot"><span>urPadel — materiał promocyjny</span><span class="url">ur-padel-ten.vercel.app</span></div>
+</section>
+
+<!-- ============ 11 · TYŁ OKŁADKI ============ -->
+<section class="page back">
+  <h2>Gotowi poprowadzić <span class="hl">swój</span> turniej?</h2>
+  <p class="sub">Otwórz aplikację, obejrzyj klub demo albo załóż własny klub w kilka minut.</p>
+  <div class="urlpill">https://ur-padel-ten.vercel.app</div>
+  <div class="contact">
+    <b>Michał Ignaczak</b> — autor<br/>
+    <a href="mailto:m.ignaczak.92@gmail.com">m.ignaczak.92@gmail.com</a>
+  </div>
+</section>
+
+</body>
+</html>

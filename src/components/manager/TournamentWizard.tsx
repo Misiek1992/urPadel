@@ -69,6 +69,7 @@ export function TournamentWizard({
   const [nameTouched, setNameTouched] = useState(false);
   const [matchPoints, setMatchPoints] = useState<number>(24);
   const [customPoints, setCustomPoints] = useState("");
+  const [scorePin, setScorePin] = useState("");
 
   const [players, setPlayers] = useState<string[]>([]);
   const [quickAdd, setQuickAdd] = useState("");
@@ -182,6 +183,7 @@ export function TournamentWizard({
           matchPoints,
           courts,
           entrants,
+          scorePin: scorePin || undefined,
         }),
       });
       const data = (await res.json().catch(() => null)) as
@@ -199,11 +201,13 @@ export function TournamentWizard({
     }
   }
 
+  const scorePinValid = scorePin === "" || /^\d{4,6}$/.test(scorePin);
+
   const canNext =
     step === 0
       ? true
       : step === 1
-        ? name.trim().length > 0 && matchPoints >= 4
+        ? name.trim().length > 0 && matchPoints >= 4 && scorePinValid
         : step === 2
           ? !setupError || courts.length === 0
           : step === 3
@@ -330,6 +334,22 @@ export function TournamentWizard({
                   b: matchPoints - Math.ceil(matchPoints * 0.66),
                 })}
               </p>
+            </div>
+            <div>
+              <label className="label">{t("wizard.scorePinLabel")}</label>
+              <Input
+                value={scorePin}
+                onChange={(e) => setScorePin(e.target.value.replace(/\D/g, "").slice(0, 6))}
+                placeholder={t("wizard.scorePinPlaceholder")}
+                inputMode="numeric"
+                className="w-32"
+              />
+              <p className="mt-2 text-xs text-slate-500">{t("wizard.scorePinHint")}</p>
+              {!scorePinValid && (
+                <p className="mt-1 text-xs font-medium text-red-400">
+                  {t("wizard.scorePinError")}
+                </p>
+              )}
             </div>
           </div>
         </Card>
@@ -659,6 +679,12 @@ export function TournamentWizard({
             <div>
               <dt className="label">{t("wizard.reviewPoints")}</dt>
               <dd className="font-semibold text-white">{matchPoints}</dd>
+            </div>
+            <div>
+              <dt className="label">{t("wizard.reviewPin")}</dt>
+              <dd className="font-semibold text-white">
+                {scorePin ? t("wizard.reviewPinSet") : t("wizard.reviewPinNone")}
+              </dd>
             </div>
             <div className="sm:col-span-2">
               <dt className="label">{t("wizard.reviewCourts")}</dt>

@@ -190,6 +190,10 @@ const en = {
     invalidNumbers: "Enter whole numbers of 0 or more.",
     sumMismatch: "Scores must add up to {points} (currently {sum}).",
     networkError: "Network error — please try again.",
+    pinRequired: "This court needs the tournament PIN to save a score.",
+    pinInvalid: "Incorrect PIN — please try again.",
+    pinLabel: "Tournament PIN",
+    pinPlaceholder: "PIN",
   },
   managerDashboard: {
     title: "Club manager",
@@ -320,6 +324,11 @@ const en = {
     customPointsPlaceholder: "Custom",
     matchEndsHint:
       "A match ends when both sides' rally points add up to {points} — e.g. {a}–{b}.",
+    scorePinLabel: "Score-entry PIN (optional)",
+    scorePinPlaceholder: "e.g. 1234",
+    scorePinHint:
+      "If set, players must enter this PIN to submit a score from the court page. Managers never need it.",
+    scorePinError: "PIN must be 4 to 6 digits.",
     selectedPlayers: "Selected {kind} ({count})",
     selectedPlayersKindTeams: "players (paired into teams)",
     selectedPlayersKindPlayers: "players",
@@ -359,6 +368,9 @@ const en = {
     reviewTeamsValue: "{count} teams ({players} players)",
     reviewPlayersValue: "{count} players",
     reviewPoints: "Points per match",
+    reviewPin: "Score-entry PIN",
+    reviewPinSet: "Set — players will be asked for it",
+    reviewPinNone: "None — anyone can submit scores",
     reviewCourts: "Courts",
     seedingNoteMexicano: "a random lottery draw.",
     seedingNoteOther:

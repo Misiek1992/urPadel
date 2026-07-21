@@ -119,3 +119,15 @@ export interface ViewerJSON {
 export function serialize<T = unknown>(value: unknown): T {
   return JSON.parse(JSON.stringify(value)) as T;
 }
+
+/**
+ * Strips `scorePin` before a tournament reaches any client. The field is
+ * `select: false` in the schema so it's already absent from ordinary reads —
+ * this only matters right after `Tournament.create()`/`.save()`, where the
+ * in-memory document still carries whatever was just set.
+ */
+export function sanitizeTournament<T extends object>(tournament: T): T {
+  const obj = tournament as T & { scorePin?: unknown };
+  delete obj.scorePin;
+  return obj;
+}

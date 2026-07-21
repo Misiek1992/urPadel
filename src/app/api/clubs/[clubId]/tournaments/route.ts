@@ -4,7 +4,12 @@ import { dbConnect } from "@/lib/db";
 import { Club, Tournament } from "@/lib/models";
 import { apiError, HttpError, requireManagerOf } from "@/lib/auth";
 import { logAction } from "@/lib/audit";
-import { serialize, type TournamentJSON, type TournamentType } from "@/lib/types";
+import {
+  sanitizeTournament,
+  serialize,
+  type TournamentJSON,
+  type TournamentType,
+} from "@/lib/types";
 import {
   TOURNAMENT_TYPES,
   generateNextRound,
@@ -59,6 +64,7 @@ export async function POST(
       matchPoints?: unknown;
       courts?: unknown;
       entrants?: unknown;
+      scorePin?: unknown;
     } | null;
     if (!body || typeof body !== "object") throw new HttpError(400, "Invalid JSON body.");
 
@@ -123,6 +129,14 @@ export async function POST(
     const setupError = validateTournamentSetup(type, entrants.length, courts.length);
     if (setupError) throw new HttpError(400, setupError);
 
+    // Optional PIN gating public score entry — 4 to 6 digits, or omitted/null.
+    let scorePin: string | null = null;
+    if (body.scorePin !== undefined && body.scorePin !== null && body.scorePin !== "") {
+      if (typeof body.scorePin !== "string" || !/^\d{4,6}$/.test(body.scorePin))
+        throw new HttpError(400, "PIN must be 4 to 6 digits.");
+      scorePin = body.scorePin;
+    }
+
     let firstRound: EngineRound;
     try {
       firstRound = generateNextRound({ type, entrants, courts, rounds: [] });
@@ -144,6 +158,7 @@ export async function POST(
       status: "active",
       pointsAwarded: false,
       playedAt: new Date(),
+      scorePin,
     });
 
     await logAction({
@@ -156,7 +171,9 @@ export async function POST(
       } entrants, ${courts.length} court${courts.length === 1 ? "" : "s"}).`,
     });
 
-    return NextResponse.json({ tournament: serialize<TournamentJSON>(tournament) });
+    return NextResponse.json({
+      tournament: sanitizeTournament(serialize<TournamentJSON>(tournament)),
+    });
   } catch (e) {
     return apiError(e);
   }

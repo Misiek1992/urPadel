@@ -97,6 +97,12 @@ Key semantics:
   `tournament.matchPoints`.
 - `Round.byes`: entrant ids resting that round.
 - `Tournament.status`: `"active" | "finished"`. `playedAt` = tournament date.
+- `Tournament.scorePin`: optional 4-6 digit string, default `null`. `select:
+  false` in the schema — absent from every query unless a route explicitly
+  does `.select("+scorePin")` (only `result/route.ts` does, to check it).
+  Never in `TournamentJSON`; after `Tournament.create()`/`.save()` the
+  in-memory doc still carries it, so any response built from a just-written
+  doc must go through `sanitizeTournament()` (src/lib/types.ts) first.
 
 ## Core library reference (already implemented — import, don't reimplement)
 
@@ -147,11 +153,11 @@ All routes under `src/app/api/`. Auth column: `public` (none), `manager`
 | `PATCH /api/ranking-entries/[entryId]` | manager of entry's club | `{points?, note?}` → `{entry}` |
 | `DELETE /api/ranking-entries/[entryId]` | manager of entry's club | → `{ok:true}` |
 | `GET /api/clubs/[clubId]/tournaments` | public | → `{tournaments: TournamentJSON[]}` newest `playedAt` first |
-| `POST /api/clubs/[clubId]/tournaments` | manager | `{name, type, matchPoints, courts: string[], entrants: {name, players?}[]}` → `{tournament}` — validate with `validateTournamentSetup` (team types: each entrant needs exactly 2 players; matchPoints int 4–128; courts non-empty, trimmed, unique). Server assigns entrant ids via `makeEntrantId()`, generates round 1 with `generateNextRound`, status `active`, `playedAt` now |
+| `POST /api/clubs/[clubId]/tournaments` | manager | `{name, type, matchPoints, courts: string[], entrants: {name, players?}[], scorePin?}` → `{tournament}` — validate with `validateTournamentSetup` (team types: each entrant needs exactly 2 players; matchPoints int 4–128; courts ≤32 non-empty/trimmed/unique; entrants ≤128). Server assigns entrant ids via `makeEntrantId()`, generates round 1 with `generateNextRound`, status `active`, `playedAt` now. `scorePin` optional, 4-6 digits or omitted; response is run through `sanitizeTournament` so it's never echoed back |
 | `GET /api/tournaments/[tournamentId]` | public | → `{tournament: TournamentJSON, standings: StandingRow[]}` |
 | `DELETE /api/tournaments/[tournamentId]` | manager | → `{ok:true}` (any status; also delete its RankingEntry docs if pointsAwarded) |
 | `POST /api/tournaments/[tournamentId]/rounds` | manager | `{final?: boolean}` → `{tournament}` — 400 if status ≠ active; 400 "Enter all results for round N first" if current round has null scores; 400 if current round `isFinal` ("Final round played — close the tournament"); 409 if another request already advanced the round since this one read it (client should refresh) |
-| `POST /api/tournaments/[tournamentId]/result` | public | `{roundNumber, court, scoreA, scoreB}` → `{tournament}` — integers ≥ 0 summing to `matchPoints` (else 400). Public callers may only set a result for the CURRENT (last) round when that match's scores are still null; a signed-in club manager may edit any round's result. 400 if tournament finished. Written via an atomic positional `updateOne` (arrayFilters on round number + court, plus `scoreA:null` for non-managers) so two courts submitting simultaneously can't clobber each other; an idempotent resubmit of the same values is treated as success |
+| `POST /api/tournaments/[tournamentId]/result` | public | `{roundNumber, court, scoreA, scoreB, pin?}` → `{tournament}` — integers ≥ 0 summing to `matchPoints` (else 400). Public callers may only set a result for the CURRENT (last) round when that match's scores are still null; a signed-in club manager may edit any round's result (and never needs a PIN). 400 if tournament finished. If the tournament has `scorePin` set, non-manager callers must supply a matching `pin`: 403 `{error, code:"pin_required"}` if omitted, 403 `{error, code:"pin_invalid"}` if wrong — `HttpError`'s third constructor arg carries `code` through `apiError`. Rate-limited (20 req/min per IP+tournament). Written via an atomic positional `updateOne` (arrayFilters on round number + court, plus `scoreA:null` for non-managers) so two courts submitting simultaneously can't clobber each other; an idempotent resubmit of the same values is treated as success |
 | `POST /api/tournaments/[tournamentId]/close` | manager | → `{tournament}` — atomically transitions `active`→`finished` (400 if already closed, including when raced concurrently) and flips `pointsAwarded` false→true; only the request that wins that flip runs `awardTournamentPoints(t)`, so concurrent closes can't double-award. Can be called in any round (unfinished matches simply don't count) |
 | `GET /api/superadmins` | superadmin | → `{emails: string[]}` (include DEFAULT_SUPERADMIN, mark it non-removable) |
 | `POST /api/superadmins` | superadmin | `{email}` → `{emails}` |

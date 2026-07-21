@@ -33,7 +33,7 @@ export async function POST(
       throw new HttpError(429, "Too many requests — please slow down and try again shortly.");
     await dbConnect();
 
-    const tournament = await Tournament.findById(tournamentId);
+    const tournament = await Tournament.findById(tournamentId).select("+scorePin");
     if (!tournament) throw new HttpError(404, "Tournament not found.");
     if (tournament.status === "finished")
       throw new HttpError(400, "The tournament is finished — results are locked.");
@@ -43,6 +43,7 @@ export async function POST(
       court?: unknown;
       scoreA?: unknown;
       scoreB?: unknown;
+      pin?: unknown;
     } | null;
     if (!body || typeof body !== "object")
       throw new HttpError(400, "Invalid JSON body.");
@@ -94,6 +95,17 @@ export async function POST(
     const isFreshResult = match.scoreA == null && match.scoreB == null;
     if (!isManager && !(isCurrentRound && isFreshResult))
       throw new HttpError(403, "Only the club manager can edit results.");
+
+    // Optional court PIN: gates the public "fresh entry" path above, not
+    // manager edits (managers are already authorized via their session).
+    const scorePin = tournament.scorePin as string | null;
+    if (!isManager && scorePin) {
+      const pin = typeof body.pin === "string" ? body.pin.trim() : "";
+      if (!pin)
+        throw new HttpError(403, "This tournament requires a PIN to submit scores.", "pin_required");
+      if (pin !== scorePin)
+        throw new HttpError(403, "Incorrect PIN.", "pin_invalid");
+    }
 
     // Write atomically instead of load-modify-save: two courts submitting
     // results at the same time both loaded the same document snapshot above,

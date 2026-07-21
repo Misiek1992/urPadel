@@ -5,9 +5,13 @@
 // result endpoint; the server enforces who may set or edit which scores.
 
 import { useRouter } from "next/navigation";
-import { useState, type FormEvent } from "react";
+import { useEffect, useState, type FormEvent } from "react";
 import { Button, ErrorText, Input, Spinner, cn } from "@/components/ui";
 import { useT } from "@/components/i18n/LocaleProvider";
+
+function pinStorageKey(tournamentId: string): string {
+  return `urpadel:pin:${tournamentId}`;
+}
 
 export function ScoreForm({
   tournamentId,
@@ -39,6 +43,13 @@ export function ScoreForm({
   const [bTouched, setBTouched] = useState(initialScoreB != null);
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [pin, setPin] = useState("");
+  const [pinRequired, setPinRequired] = useState(false);
+
+  useEffect(() => {
+    const remembered = sessionStorage.getItem(pinStorageKey(tournamentId));
+    if (remembered) setPin(remembered);
+  }, [tournamentId]);
 
   function handleA(value: string) {
     setScoreA(value);
@@ -66,12 +77,32 @@ export function ScoreForm({
       const res = await fetch(`/api/tournaments/${tournamentId}/result`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ roundNumber, court, scoreA: a, scoreB: b }),
+        body: JSON.stringify({
+          roundNumber,
+          court,
+          scoreA: a,
+          scoreB: b,
+          pin: pin || undefined,
+        }),
       });
       if (!res.ok) {
-        const data = (await res.json().catch(() => null)) as { error?: string } | null;
+        const data = (await res.json().catch(() => null)) as
+          | { error?: string; code?: string }
+          | null;
+        if (data?.code === "pin_required" || data?.code === "pin_invalid") {
+          setPinRequired(true);
+          setError(
+            data.code === "pin_invalid"
+              ? t("scoreForm.pinInvalid")
+              : t("scoreForm.pinRequired")
+          );
+          return;
+        }
         setError(data?.error ?? t("common.requestFailed", { status: res.status }));
         return;
+      }
+      if (pinRequired && pin) {
+        sessionStorage.setItem(pinStorageKey(tournamentId), pin);
       }
       onSaved?.();
       router.refresh();
@@ -137,6 +168,26 @@ export function ScoreForm({
           {t("scoreForm.save")}
         </Button>
       </div>
+      {pinRequired && (
+        <div className="mt-3 flex flex-col items-center gap-1.5">
+          <label
+            htmlFor={`pin-${tournamentId}-${court}`}
+            className={cn("font-semibold text-slate-300", xl ? "text-base" : "text-xs")}
+          >
+            {t("scoreForm.pinLabel")}
+          </label>
+          <Input
+            id={`pin-${tournamentId}-${court}`}
+            type="text"
+            inputMode="numeric"
+            value={pin}
+            onChange={(e) => setPin(e.target.value.replace(/\D/g, "").slice(0, 6))}
+            placeholder={t("scoreForm.pinPlaceholder")}
+            className={cn("text-center font-bold tracking-widest", xl ? "w-32 text-2xl" : "w-24")}
+            autoFocus
+          />
+        </div>
+      )}
       <p
         className={cn(
           "mt-1.5 text-center text-slate-500",

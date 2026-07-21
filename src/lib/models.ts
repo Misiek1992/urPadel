@@ -86,6 +86,11 @@ const TournamentSchema = new Schema(
     pointsAwarded: { type: Boolean, default: false },
     playedAt: { type: Date, default: Date.now },
     finishedAt: { type: Date, default: null },
+    // Optional 4-6 digit PIN gating public (non-manager) score entry.
+    // `select: false` so it's excluded from every query by default — routes
+    // that actually need to check it opt in with `.select("+scorePin")`.
+    // Stored plain: it's a low-stakes shared court PIN, not a credential.
+    scorePin: { type: String, default: null, select: false },
   },
   { timestamps: true }
 );

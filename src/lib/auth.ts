@@ -11,9 +11,11 @@ export const DEFAULT_SUPERADMIN = (
 
 export class HttpError extends Error {
   status: number;
-  constructor(status: number, message: string) {
+  code?: string;
+  constructor(status: number, message: string, code?: string) {
     super(message);
     this.status = status;
+    this.code = code;
   }
 }
 
@@ -107,7 +109,10 @@ export async function requireManagerOf(clubId: string): Promise<string> {
 /** Standard error response for API route catch blocks. */
 export function apiError(e: unknown): NextResponse {
   if (e instanceof HttpError) {
-    return NextResponse.json({ error: e.message }, { status: e.status });
+    return NextResponse.json(
+      { error: e.message, ...(e.code ? { code: e.code } : {}) },
+      { status: e.status }
+    );
   }
   console.error(e);
   const message = e instanceof Error ? e.message : "Internal server error";

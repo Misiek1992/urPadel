@@ -198,6 +198,10 @@ const pl: Dictionary = {
     invalidNumbers: "Podaj liczby całkowite większe lub równe 0.",
     sumMismatch: "Wyniki muszą sumować się do {points} (obecnie {sum}).",
     networkError: "Błąd sieci — spróbuj ponownie.",
+    pinRequired: "Ten kort wymaga PIN-u turnieju, aby zapisać wynik.",
+    pinInvalid: "Nieprawidłowy PIN — spróbuj ponownie.",
+    pinLabel: "PIN turnieju",
+    pinPlaceholder: "PIN",
   },
   managerDashboard: {
     title: "Panel klubu",
@@ -327,6 +331,11 @@ const pl: Dictionary = {
     customPointsPlaceholder: "Inna",
     matchEndsHint:
       "Mecz kończy się, gdy suma punktów obu stron wyniesie {points} — np. {a}–{b}.",
+    scorePinLabel: "PIN do wpisywania wyników (opcjonalnie)",
+    scorePinPlaceholder: "np. 1234",
+    scorePinHint:
+      "Jeśli ustawiony, gracze muszą podać ten PIN, aby wpisać wynik ze strony kortu. Menedżerowie nigdy go nie potrzebują.",
+    scorePinError: "PIN musi mieć od 4 do 6 cyfr.",
     selectedPlayers: "Wybrani {kind} ({count})",
     selectedPlayersKindTeams: "gracze (podzieleni na drużyny)",
     selectedPlayersKindPlayers: "gracze",
@@ -366,6 +375,9 @@ const pl: Dictionary = {
     reviewTeamsValue: "{count} drużyn ({players} graczy)",
     reviewPlayersValue: "{count} graczy",
     reviewPoints: "Punkty w meczu",
+    reviewPin: "PIN do wyników",
+    reviewPinSet: "Ustawiony — gracze zostaną o niego poproszeni",
+    reviewPinNone: "Brak — każdy może wpisać wynik",
     reviewCourts: "Korty",
     seedingNoteMexicano: "losowanie.",
     seedingNoteOther:

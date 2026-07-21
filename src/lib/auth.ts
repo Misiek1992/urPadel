@@ -1,3 +1,4 @@
+import { cache } from "react";
 import { currentUser } from "@clerk/nextjs/server";
 import { NextResponse } from "next/server";
 import { dbConnect } from "./db";
@@ -16,8 +17,17 @@ export class HttpError extends Error {
   }
 }
 
-/** Email of the signed-in Clerk user, lowercased, or null. */
-export async function getSessionEmail(): Promise<string | null> {
+/**
+ * Email of the signed-in Clerk user, lowercased, or null.
+ *
+ * Wrapped in React `cache()`: the root layout's SiteHeader and the page body
+ * both resolve the viewer on every request, so without this every
+ * manager/superadmin navigation did the Clerk lookup (and the two queries
+ * below) twice. `cache()` dedupes repeat calls within a single request/render
+ * — it has no effect across requests, so session changes are picked up as
+ * usual on the next navigation.
+ */
+export const getSessionEmail = cache(async (): Promise<string | null> => {
   try {
     const user = await currentUser();
     const email =
@@ -27,21 +37,23 @@ export async function getSessionEmail(): Promise<string | null> {
   } catch {
     return null;
   }
-}
+});
 
-export async function isSuperAdminEmail(email: string | null): Promise<boolean> {
-  if (!email) return false;
-  if (email === DEFAULT_SUPERADMIN) return true;
-  try {
-    await dbConnect();
-    return Boolean(await AppUser.exists({ email, role: "superadmin" }));
-  } catch {
-    return false;
+export const isSuperAdminEmail = cache(
+  async (email: string | null): Promise<boolean> => {
+    if (!email) return false;
+    if (email === DEFAULT_SUPERADMIN) return true;
+    try {
+      await dbConnect();
+      return Boolean(await AppUser.exists({ email, role: "superadmin" }));
+    } catch {
+      return false;
+    }
   }
-}
+);
 
 /** Who is viewing: email, superadmin flag, and clubs they manage (superadmins manage all). */
-export async function getViewer(): Promise<ViewerJSON> {
+export const getViewer = cache(async (): Promise<ViewerJSON> => {
   const email = await getSessionEmail();
   if (!email) return { email: null, isSuperAdmin: false, managedClubs: [] };
   const isSuperAdmin = await isSuperAdminEmail(email);
@@ -62,7 +74,7 @@ export async function getViewer(): Promise<ViewerJSON> {
   } catch {
     return { email, isSuperAdmin, managedClubs: [] };
   }
-}
+});
 
 /** Throws 401/403 unless the viewer is a superadmin. Returns their email. */
 export async function requireSuperAdmin(): Promise<string> {

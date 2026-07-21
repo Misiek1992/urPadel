@@ -71,7 +71,7 @@ const EntrantSchema = new Schema(
 
 const TournamentSchema = new Schema(
   {
-    clubId: { type: Schema.Types.ObjectId, ref: "Club", required: true, index: true },
+    clubId: { type: Schema.Types.ObjectId, ref: "Club", required: true },
     name: { type: String, required: true, trim: true },
     type: {
       type: String,
@@ -89,6 +89,11 @@ const TournamentSchema = new Schema(
   },
   { timestamps: true }
 );
+// Every club-scoped tournament list is `find({clubId}).sort({playedAt:-1})`
+// (club page, manager dashboard, the tournaments API) or filtered further by
+// status (the /clubs index's per-club active count) — cover both.
+TournamentSchema.index({ clubId: 1, playedAt: -1 });
+TournamentSchema.index({ clubId: 1, status: 1 });
 
 const AppUserSchema = new Schema(
   {
@@ -110,6 +115,8 @@ const AuditLogSchema = new Schema(
   { timestamps: true }
 );
 AuditLogSchema.index({ createdAt: -1 });
+// The manager-scoped activity log filters by clubId before sorting.
+AuditLogSchema.index({ clubId: 1, createdAt: -1 });
 
 export const Club = mongoose.models.Club || mongoose.model("Club", ClubSchema);
 export const ClubPlayer =

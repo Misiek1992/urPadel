@@ -1,7 +1,8 @@
-// Draws a branded, share-ready results poster onto a <canvas> — used for the
-// JPEG and PDF exports of a finished tournament. Pure client-side canvas
-// drawing (no DOM capture libraries), so the output is deterministic, crisp
-// (rendered at 2×), and always matches the urPadel navy/volt brand.
+// Draws branded, share-ready posters onto a <canvas> — used for the JPEG and
+// PDF exports of a finished tournament's results and of a club's rolling
+// ranking. Pure client-side canvas drawing (no DOM capture libraries), so the
+// output is deterministic, crisp (rendered at 2×), and always matches the
+// urPadel navy/volt brand.
 
 export interface ScoreboardRow {
   position: number;
@@ -17,6 +18,21 @@ export interface ScoreboardData {
   roundLabels: string[];
   rows: ScoreboardRow[];
   labels: { position: string; player: string; total: string };
+  footer: string;
+}
+
+export interface RankingPosterRow {
+  position: number;
+  name: string;
+  tournamentsPlayed: number;
+  total: number;
+}
+
+export interface RankingPosterData {
+  title: string;
+  subtitle: string;
+  rows: RankingPosterRow[];
+  labels: { position: string; player: string; tournaments: string; total: string };
   footer: string;
 }
 
@@ -105,9 +121,102 @@ function drawMark(ctx: CanvasRenderingContext2D, x: number, y: number, s: number
   ctx.restore();
 }
 
+/** Background wash + brand mark/wordmark + title/subtitle. Shared by both poster types. */
+function drawHeader(
+  ctx: CanvasRenderingContext2D,
+  W: number,
+  H: number,
+  PAD: number,
+  title: string,
+  subtitle: string
+): void {
+  ctx.fillStyle = NAVY;
+  ctx.fillRect(0, 0, W, H);
+  let glow = ctx.createRadialGradient(W * 0.88, 0, 0, W * 0.88, 0, 700);
+  glow.addColorStop(0, "rgba(217,249,84,0.10)");
+  glow.addColorStop(1, "rgba(217,249,84,0)");
+  ctx.fillStyle = glow;
+  ctx.fillRect(0, 0, W, H);
+  glow = ctx.createRadialGradient(0, H * 0.25, 0, 0, H * 0.25, 800);
+  glow.addColorStop(0, "rgba(47,125,225,0.13)");
+  glow.addColorStop(1, "rgba(47,125,225,0)");
+  ctx.fillStyle = glow;
+  ctx.fillRect(0, 0, W, H);
+
+  drawMark(ctx, PAD, 46, 64);
+  ctx.font = font(800, 34);
+  ctx.fillStyle = VOLT;
+  ctx.fillText("ur", PAD + 78, 78);
+  const urW = ctx.measureText("ur").width;
+  ctx.fillStyle = WHITE;
+  ctx.fillText("Padel", PAD + 78 + urW, 78);
+
+  ctx.font = font(800, 54);
+  ctx.fillStyle = WHITE;
+  ctx.fillText(truncate(ctx, title, W - PAD * 2), PAD, 160);
+  ctx.font = font(600, 24);
+  ctx.fillStyle = GRAY;
+  ctx.fillText(truncate(ctx, subtitle, W - PAD * 2), PAD, 204);
+}
+
+/** Top-3 podium cards (gold centered, silver/bronze either side). Returns the new y offset. */
+function drawPodium(
+  ctx: CanvasRenderingContext2D,
+  W: number,
+  PAD: number,
+  y: number,
+  podiumH: number,
+  entries: { name: string; total: number }[]
+): number {
+  if (podiumH === 0) return y;
+  const gap = 24;
+  const cardW = (W - PAD * 2 - gap * 2) / 3;
+  const order = [1, 0, 2]; // silver, gold, bronze — gold in the middle
+  order.forEach((rowIdx, i) => {
+    const row = entries[rowIdx];
+    const x = PAD + i * (cardW + gap);
+    const lift = rowIdx === 0 ? 0 : 18;
+    const cardH = podiumH - 32 - lift;
+    const cy = y + lift;
+    ctx.fillStyle = rowIdx === 0 ? "rgba(217,249,84,0.09)" : NAVY_CARD;
+    roundRect(ctx, x, cy, cardW, cardH, 18);
+    ctx.fill();
+    ctx.strokeStyle = rowIdx === 0 ? "rgba(217,249,84,0.45)" : BORDER;
+    ctx.lineWidth = 2;
+    roundRect(ctx, x, cy, cardW, cardH, 18);
+    ctx.stroke();
+    ctx.textAlign = "center";
+    ctx.font = font(400, 40);
+    ctx.fillStyle = WHITE;
+    ctx.fillText(MEDALS[rowIdx], x + cardW / 2, cy + 38);
+    ctx.font = font(700, 27);
+    ctx.fillText(truncate(ctx, row.name, cardW - 40), x + cardW / 2, cy + 82);
+    ctx.font = font(800, 34);
+    ctx.fillStyle = VOLT;
+    ctx.fillText(String(row.total), x + cardW / 2, cy + cardH - 34);
+    ctx.textAlign = "left";
+  });
+  return y + podiumH;
+}
+
+function drawFooter(
+  ctx: CanvasRenderingContext2D,
+  W: number,
+  y: number,
+  footerH: number,
+  text: string
+): void {
+  const fy = y + footerH / 2 + 8;
+  ctx.textAlign = "center";
+  ctx.font = font(600, 21);
+  ctx.fillStyle = GRAY_DIM;
+  ctx.fillText(text, W / 2, fy);
+  ctx.textAlign = "left";
+}
+
 /**
- * Renders the poster and returns its logical pixel dimensions. The canvas is
- * internally rendered at 2× for print/retina quality.
+ * Renders the results poster and returns its logical pixel dimensions. The
+ * canvas is internally rendered at 2× for print/retina quality.
  */
 export function drawScoreboard(
   canvas: HTMLCanvasElement,
@@ -132,68 +241,8 @@ export function drawScoreboard(
   ctx.scale(SCALE, SCALE);
   ctx.textBaseline = "middle";
 
-  // ---- background ----
-  ctx.fillStyle = NAVY;
-  ctx.fillRect(0, 0, W, H);
-  let glow = ctx.createRadialGradient(W * 0.88, 0, 0, W * 0.88, 0, 700);
-  glow.addColorStop(0, "rgba(217,249,84,0.10)");
-  glow.addColorStop(1, "rgba(217,249,84,0)");
-  ctx.fillStyle = glow;
-  ctx.fillRect(0, 0, W, H);
-  glow = ctx.createRadialGradient(0, H * 0.25, 0, 0, H * 0.25, 800);
-  glow.addColorStop(0, "rgba(47,125,225,0.13)");
-  glow.addColorStop(1, "rgba(47,125,225,0)");
-  ctx.fillStyle = glow;
-  ctx.fillRect(0, 0, W, H);
-
-  // ---- header ----
-  drawMark(ctx, PAD, 46, 64);
-  ctx.font = font(800, 34);
-  ctx.fillStyle = VOLT;
-  ctx.fillText("ur", PAD + 78, 78);
-  const urW = ctx.measureText("ur").width;
-  ctx.fillStyle = WHITE;
-  ctx.fillText("Padel", PAD + 78 + urW, 78);
-
-  ctx.font = font(800, 54);
-  ctx.fillStyle = WHITE;
-  ctx.fillText(truncate(ctx, data.title, W - PAD * 2), PAD, 160);
-  ctx.font = font(600, 24);
-  ctx.fillStyle = GRAY;
-  ctx.fillText(truncate(ctx, data.subtitle, W - PAD * 2), PAD, 204);
-
-  // ---- podium ----
-  let y = headerH;
-  if (podiumH > 0) {
-    const gap = 24;
-    const cardW = (W - PAD * 2 - gap * 2) / 3;
-    const order = [1, 0, 2]; // silver, gold, bronze — gold in the middle
-    order.forEach((rowIdx, i) => {
-      const row = data.rows[rowIdx];
-      const x = PAD + i * (cardW + gap);
-      const lift = rowIdx === 0 ? 0 : 18;
-      const cardH = podiumH - 32 - lift;
-      const cy = y + lift;
-      ctx.fillStyle = rowIdx === 0 ? "rgba(217,249,84,0.09)" : NAVY_CARD;
-      roundRect(ctx, x, cy, cardW, cardH, 18);
-      ctx.fill();
-      ctx.strokeStyle = rowIdx === 0 ? "rgba(217,249,84,0.45)" : BORDER;
-      ctx.lineWidth = 2;
-      roundRect(ctx, x, cy, cardW, cardH, 18);
-      ctx.stroke();
-      ctx.textAlign = "center";
-      ctx.font = font(400, 40);
-      ctx.fillStyle = WHITE;
-      ctx.fillText(MEDALS[rowIdx], x + cardW / 2, cy + 38);
-      ctx.font = font(700, 27);
-      ctx.fillText(truncate(ctx, row.name, cardW - 40), x + cardW / 2, cy + 82);
-      ctx.font = font(800, 34);
-      ctx.fillStyle = VOLT;
-      ctx.fillText(String(row.total), x + cardW / 2, cy + cardH - 34);
-      ctx.textAlign = "left";
-    });
-    y += podiumH;
-  }
+  drawHeader(ctx, W, H, PAD, data.title, data.subtitle);
+  let y = drawPodium(ctx, W, PAD, headerH, podiumH, data.rows);
 
   // ---- table ----
   const nRounds = data.roundLabels.length;
@@ -300,13 +349,118 @@ export function drawScoreboard(
     }
   });
 
-  // ---- footer ----
-  const fy = y + tableH + footerH / 2 + 8;
+  y += tableH;
+  drawFooter(ctx, W, y, footerH, data.footer);
+
+  return { width: W * SCALE, height: H * SCALE };
+}
+
+/**
+ * Renders a club-ranking poster (# / player / tournaments played / points,
+ * no per-round columns) and returns its logical pixel dimensions.
+ */
+export function drawRankingPoster(
+  canvas: HTMLCanvasElement,
+  data: RankingPosterData
+): { width: number; height: number } {
+  const W = 1560;
+  const PAD = 72;
+  const rowH = 58;
+  const tableHeaderH = 58;
+  const podiumH = data.rows.length >= 3 ? 196 : 0;
+  const headerH = 236;
+  const tableH = tableHeaderH + data.rows.length * rowH;
+  const footerH = 110;
+  const H = headerH + podiumH + tableH + footerH + 56;
+
+  const SCALE = 2;
+  canvas.width = W * SCALE;
+  canvas.height = H * SCALE;
+  const ctx = canvas.getContext("2d");
+  if (!ctx) throw new Error("Canvas 2D context unavailable");
+  ctx.scale(SCALE, SCALE);
+  ctx.textBaseline = "middle";
+
+  drawHeader(ctx, W, H, PAD, data.title, data.subtitle);
+  let y = drawPodium(ctx, W, PAD, headerH, podiumH, data.rows);
+
+  // ---- table ----
+  const posW = 76;
+  const tournamentsW = 200;
+  const totalW = 150;
+  const playerW = W - PAD * 2 - posW - tournamentsW - totalW;
+  const tableX = PAD;
+  const tableW = W - PAD * 2;
+
+  ctx.fillStyle = "rgba(255,255,255,0.03)";
+  roundRect(ctx, tableX, y, tableW, tableH, 16);
+  ctx.fill();
+  ctx.strokeStyle = BORDER;
+  ctx.lineWidth = 2;
+  roundRect(ctx, tableX, y, tableW, tableH, 16);
+  ctx.stroke();
+
+  // header row
+  ctx.font = font(700, 19);
+  ctx.fillStyle = GRAY;
+  const headerMid = y + tableHeaderH / 2;
+  ctx.fillText(data.labels.position, tableX + 28, headerMid);
+  ctx.fillText(data.labels.player, tableX + posW + 16, headerMid);
   ctx.textAlign = "center";
-  ctx.font = font(600, 21);
-  ctx.fillStyle = GRAY_DIM;
-  ctx.fillText(data.footer, W / 2, fy);
+  ctx.fillText(data.labels.tournaments, tableX + posW + playerW + tournamentsW / 2, headerMid);
+  ctx.textAlign = "right";
+  ctx.fillText(data.labels.total, tableX + tableW - 28, headerMid);
   ctx.textAlign = "left";
+  ctx.strokeStyle = BORDER;
+  ctx.beginPath();
+  ctx.moveTo(tableX, y + tableHeaderH);
+  ctx.lineTo(tableX + tableW, y + tableHeaderH);
+  ctx.stroke();
+
+  // rows
+  data.rows.forEach((row, i) => {
+    const ry = y + tableHeaderH + i * rowH;
+    const mid = ry + rowH / 2;
+    if (row.position <= 3) {
+      ctx.fillStyle = "rgba(217,249,84,0.05)";
+      ctx.fillRect(tableX + 2, ry, tableW - 4, rowH);
+    } else if (i % 2 === 1) {
+      ctx.fillStyle = "rgba(255,255,255,0.025)";
+      ctx.fillRect(tableX + 2, ry, tableW - 4, rowH);
+    }
+    if (row.position <= 3) {
+      ctx.font = font(400, 26);
+      ctx.fillStyle = WHITE;
+      ctx.fillText(MEDALS[row.position - 1], tableX + 22, mid);
+    } else {
+      ctx.font = font(700, 22);
+      ctx.fillStyle = GRAY_DIM;
+      ctx.fillText(String(row.position), tableX + 30, mid);
+    }
+    ctx.fillStyle = WHITE;
+    ctx.font = font(700, 24);
+    ctx.fillText(truncate(ctx, row.name, playerW - 32), tableX + posW + 16, mid);
+    ctx.textAlign = "center";
+    ctx.font = font(600, 22);
+    ctx.fillStyle = "#cbd5e1";
+    ctx.fillText(String(row.tournamentsPlayed), tableX + posW + playerW + tournamentsW / 2, mid);
+    ctx.textAlign = "right";
+    ctx.font = font(800, 26);
+    ctx.fillStyle = VOLT;
+    ctx.fillText(String(row.total), tableX + tableW - 28, mid);
+    ctx.textAlign = "left";
+    if (i < data.rows.length - 1) {
+      ctx.strokeStyle = "rgba(255,255,255,0.05)";
+      ctx.lineWidth = 1;
+      ctx.beginPath();
+      ctx.moveTo(tableX + 2, ry + rowH);
+      ctx.lineTo(tableX + tableW - 2, ry + rowH);
+      ctx.stroke();
+    }
+  });
+
+  y += tableH;
+  drawFooter(ctx, W, y, footerH, data.footer);
 
   return { width: W * SCALE, height: H * SCALE };
 }

@@ -14,6 +14,7 @@ import { Badge, EmptyState, PageHeader } from "@/components/ui";
 import { cn } from "@/lib/cn";
 import { formatDate } from "@/components/public/helpers";
 import { medalFor } from "@/components/public/StandingsTable";
+import { ExportRanking } from "@/components/public/ExportRanking";
 
 export const dynamic = "force-dynamic";
 
@@ -181,50 +182,64 @@ export default async function ClubPage({
             hint={t("clubPage.noRankingHint")}
           />
         ) : (
-          <div className="table-wrap">
-            <table className="table-base">
-              <thead>
-                <tr>
-                  <th className="w-12">{t("clubPage.position")}</th>
-                  <th>{t("clubPage.player")}</th>
-                  <th className="text-right">{t("clubPage.points")}</th>
-                  <th className="text-right">{t("clubPage.tournamentsPlayed")}</th>
-                </tr>
-              </thead>
-              <tbody>
-                {ranking.map((row) => {
-                  const medal = medalFor(row.position);
-                  return (
-                    <tr
-                      key={row.playerName}
-                      className={cn(row.position <= 3 && "bg-volt-400/[0.04]")}
-                    >
-                      <td
-                        className={cn(
-                          "font-bold",
-                          row.position === 1
-                            ? "text-volt-300"
-                            : row.position === 2
-                              ? "text-slate-300"
-                              : row.position === 3
-                                ? "text-amber-600"
-                                : "text-slate-500"
-                        )}
+          <div className="space-y-4">
+            <ExportRanking
+              title={club.name}
+              subtitle={[club.city, t("clubPage.rollingWindow")].filter(Boolean).join("  ·  ")}
+              rows={ranking.map((row) => ({
+                position: row.position,
+                name: row.playerName,
+                tournamentsPlayed: row.tournamentsPlayed,
+                total: row.total,
+              }))}
+              fileBase={`${club.slug}-ranking`}
+              clubPath={`/club/${club.slug}`}
+            />
+            <div className="table-wrap">
+              <table className="table-base">
+                <thead>
+                  <tr>
+                    <th className="w-12">{t("clubPage.position")}</th>
+                    <th>{t("clubPage.player")}</th>
+                    <th className="text-right">{t("clubPage.points")}</th>
+                    <th className="text-right">{t("clubPage.tournamentsPlayed")}</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {ranking.map((row) => {
+                    const medal = medalFor(row.position);
+                    return (
+                      <tr
+                        key={row.playerName}
+                        className={cn(row.position <= 3 && "bg-volt-400/[0.04]")}
                       >
-                        {medal ?? row.position}
-                      </td>
-                      <td className="font-semibold text-white">{row.playerName}</td>
-                      <td className="text-right text-base font-extrabold text-volt-300">
-                        {row.total}
-                      </td>
-                      <td className="text-right text-slate-400">
-                        {row.tournamentsPlayed}
-                      </td>
-                    </tr>
-                  );
-                })}
-              </tbody>
-            </table>
+                        <td
+                          className={cn(
+                            "font-bold",
+                            row.position === 1
+                              ? "text-volt-300"
+                              : row.position === 2
+                                ? "text-slate-300"
+                                : row.position === 3
+                                  ? "text-amber-600"
+                                  : "text-slate-500"
+                          )}
+                        >
+                          {medal ?? row.position}
+                        </td>
+                        <td className="font-semibold text-white">{row.playerName}</td>
+                        <td className="text-right text-base font-extrabold text-volt-300">
+                          {row.total}
+                        </td>
+                        <td className="text-right text-slate-400">
+                          {row.tournamentsPlayed}
+                        </td>
+                      </tr>
+                    );
+                  })}
+                </tbody>
+              </table>
+            </div>
           </div>
         )}
       </section>

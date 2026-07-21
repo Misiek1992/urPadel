@@ -543,6 +543,12 @@ const pl: Dictionary = {
     msgFooter: "wysłano z urPadel",
     posterFooter: "urPadel · {url}",
   },
+  exportRanking: {
+    hint: "Pobierz ranking klubu jako obraz albo udostępnij go graczom.",
+    msgHeader: "🏆 {name} — ranking klubu",
+    msgLine: "{medal} {name} — {points} pkt",
+    msgFull: "📊 Pełny ranking: {url}",
+  },
   present: {
     badge: "Widok kortów na żywo",
     liveIndicator: "Na żywo",

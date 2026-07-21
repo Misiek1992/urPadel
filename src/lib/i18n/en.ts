@@ -545,6 +545,12 @@ const en = {
     msgFooter: "sent with urPadel",
     posterFooter: "urPadel · {url}",
   },
+  exportRanking: {
+    hint: "Download the club ranking as a picture, or share it with your players.",
+    msgHeader: "🏆 {name} — club ranking",
+    msgLine: "{medal} {name} — {points} pts",
+    msgFull: "📊 Full ranking: {url}",
+  },
   present: {
     badge: "Live court view",
     liveIndicator: "Live",

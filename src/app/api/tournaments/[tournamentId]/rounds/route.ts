@@ -66,9 +66,31 @@ export async function POST(
       );
     }
 
-    tournament.rounds.push(nextRound);
-    tournament.markModified("rounds");
-    await tournament.save();
+    // Push atomically, guarded by the round count we read: if someone else
+    // (e.g. a double-click, or two managers) already advanced the round
+    // since we computed `nextRound` from this snapshot, $expr fails to match
+    // and we discard the computed round rather than pushing a duplicate.
+    const expectedLength = rounds.length;
+    const pushResult = await Tournament.updateOne(
+      {
+        _id: tournament._id,
+        status: "active",
+        $expr: { $eq: [{ $size: "$rounds" }, expectedLength] },
+      },
+      { $push: { rounds: nextRound } }
+    );
+    if (pushResult.matchedCount === 0) {
+      const fresh = await Tournament.findById(tournament._id);
+      if (!fresh) throw new HttpError(404, "Tournament not found.");
+      if (fresh.status !== "active")
+        throw new HttpError(400, "The tournament is already closed.");
+      throw new HttpError(
+        409,
+        "This round has already started — refresh to see it."
+      );
+    }
+
+    const updated = await Tournament.findById(tournament._id);
 
     await logAction({
       actorEmail,
@@ -81,7 +103,7 @@ export async function POST(
     });
 
     return NextResponse.json({
-      tournament: serialize<TournamentJSON>(tournament),
+      tournament: serialize<TournamentJSON>(updated),
     });
   } catch (e) {
     return apiError(e);

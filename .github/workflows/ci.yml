@@ -1,0 +1,40 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    env:
+      # The build never touches the database (every page is force-dynamic,
+      # so nothing runs at build time) but Next.js still inlines
+      # NEXT_PUBLIC_* values into the client bundle, and Clerk's own
+      # build-time checks want a well-formed test key even though it's
+      # never actually used against a live Clerk instance in CI.
+      NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY: pk_test_Y2ktcGxhY2Vob2xkZXIuY2xlcmsuYWNjb3VudHMuZGV2JA
+      CLERK_SECRET_KEY: sk_test_ci-placeholder-not-a-real-secret
+      MONGODB_URI: mongodb://127.0.0.1:27017/urpadel-ci
+      SUPERADMIN_EMAIL: ci@example.com
+      NEXT_PUBLIC_SITE_URL: http://localhost:3000
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 24
+          cache: npm
+
+      - run: npm ci
+
+      - name: Typecheck
+        run: npm run typecheck
+
+      - name: Test
+        run: npm run test
+
+      - name: Build
+        run: npm run build

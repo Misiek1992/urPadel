@@ -10,6 +10,7 @@
     "build": "next build",
     "start": "next start",
     "typecheck": "tsc --noEmit",
+    "test": "vitest run",
     "seed": "tsx scripts/seed.ts"
   },
   "dependencies": {
@@ -28,7 +29,8 @@
     "dotenv": "^16.4.5",
     "tailwindcss": "^4.1.4",
     "tsx": "^4.19.2",
-    "typescript": "^5.8.2"
+    "typescript": "^5.8.2",
+    "vitest": "^4.1.10"
   },
   "overrides": {
     "postcss": "^8.5.10"

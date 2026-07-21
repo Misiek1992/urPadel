@@ -86,10 +86,54 @@ export async function POST(
     if (!isManager && !(isCurrentRound && isFreshResult))
       throw new HttpError(403, "Only the club manager can edit results.");
 
-    match.scoreA = scoreA;
-    match.scoreB = scoreB;
-    tournament.markModified("rounds");
-    await tournament.save();
+    // Write atomically instead of load-modify-save: two courts submitting
+    // results at the same time both loaded the same document snapshot above,
+    // so a plain `tournament.save()` here would let the second write clobber
+    // the first (Mongoose serializes the *entire* rounds array on save). A
+    // positional $set only ever touches this one match's two fields.
+    const arrayFilters: Record<string, unknown>[] = [{ "r.number": roundNumber }];
+    const matchFilter: Record<string, unknown> = { "m.court": court };
+    if (!isManager) {
+      // Re-assert freshness at the database level so two simultaneous "first
+      // entry" submissions for the same match can't both succeed.
+      matchFilter["m.scoreA"] = null;
+    }
+    arrayFilters.push(matchFilter);
+
+    const updateResult = await Tournament.updateOne(
+      { _id: tournament._id, status: "active" },
+      {
+        $set: {
+          "rounds.$[r].matches.$[m].scoreA": scoreA,
+          "rounds.$[r].matches.$[m].scoreB": scoreB,
+        },
+      },
+      { arrayFilters }
+    );
+
+    if (updateResult.matchedCount === 0) {
+      throw new HttpError(400, "The tournament is finished — results are locked.");
+    }
+    if (updateResult.modifiedCount === 0) {
+      // The array filters matched nothing. Re-read to find out why: either
+      // the round/court vanished (shouldn't happen, already checked above),
+      // the value was already exactly this (harmless double-submit — treat
+      // as success), or a manager-only edit was attempted without being one.
+      const fresh = await Tournament.findById(tournament._id);
+      if (!fresh) throw new HttpError(404, "Tournament not found.");
+      const freshRounds = fresh.rounds as EngineRound[];
+      const freshRound = freshRounds.find((r) => r.number === roundNumber);
+      if (!freshRound) throw new HttpError(404, "Round not found.");
+      const freshMatch = freshRound.matches.find((m) => m.court === court);
+      if (!freshMatch)
+        throw new HttpError(404, `No match on "${court}" in round ${roundNumber}.`);
+      if (freshMatch.scoreA === scoreA && freshMatch.scoreB === scoreB) {
+        return NextResponse.json({ tournament: serialize<TournamentJSON>(fresh) });
+      }
+      throw new HttpError(403, "Only the club manager can edit results.");
+    }
+
+    const updated = await Tournament.findById(tournament._id);
 
     await logAction({
       actorEmail: email ?? "court",
@@ -100,7 +144,7 @@ export async function POST(
     });
 
     return NextResponse.json({
-      tournament: serialize<TournamentJSON>(tournament),
+      tournament: serialize<TournamentJSON>(updated),
     });
   } catch (e) {
     return apiError(e);

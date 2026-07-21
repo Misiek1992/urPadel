@@ -27,15 +27,31 @@ export async function POST(
     if (tournament.status === "finished")
       throw new HttpError(400, "The tournament is already closed.");
 
-    tournament.status = "finished";
-    tournament.finishedAt = new Date();
-    await tournament.save();
-
-    if (!tournament.pointsAwarded) {
-      await awardTournamentPoints(tournament);
-      tournament.pointsAwarded = true;
-      await tournament.save();
+    // Atomically transition active -> finished: a conditional update guards
+    // against two concurrent close requests both proceeding (the loser's
+    // filter no longer matches once the winner has flipped the status).
+    const finishedAt = new Date();
+    const closeResult = await Tournament.updateOne(
+      { _id: tournament._id, status: "active" },
+      { $set: { status: "finished", finishedAt } }
+    );
+    if (closeResult.matchedCount === 0) {
+      throw new HttpError(400, "The tournament is already closed.");
     }
+
+    // Award ranking points exactly once: flip pointsAwarded false -> true
+    // atomically and only the request that wins the flip runs the award.
+    // Entrants/rounds haven't changed since we loaded `tournament` above, so
+    // it's safe to compute standings from that in-memory snapshot.
+    const awardResult = await Tournament.updateOne(
+      { _id: tournament._id, pointsAwarded: false },
+      { $set: { pointsAwarded: true } }
+    );
+    if (awardResult.modifiedCount === 1) {
+      await awardTournamentPoints(tournament, { date: finishedAt });
+    }
+
+    const updated = await Tournament.findById(tournament._id);
 
     await logAction({
       actorEmail,
@@ -46,7 +62,7 @@ export async function POST(
     });
 
     return NextResponse.json({
-      tournament: serialize<TournamentJSON>(tournament),
+      tournament: serialize<TournamentJSON>(updated),
     });
   } catch (e) {
     return apiError(e);

@@ -1,13 +1,11 @@
+import type { Metadata } from "next";
 import Link from "next/link";
 import { notFound } from "next/navigation";
-import { isValidObjectId } from "mongoose";
-import { dbConnect } from "@/lib/db";
-import { Club, Tournament } from "@/lib/models";
-import { serialize, type ClubJSON, type TournamentJSON } from "@/lib/types";
 import { computeStandings } from "@/lib/engine";
 import { formatLabel } from "@/lib/i18n/formats";
 import { createT } from "@/lib/i18n";
 import { getLocale } from "@/lib/i18n/server";
+import { getTournamentWithClub } from "@/lib/loaders";
 import { Badge, PageHeader } from "@/components/ui";
 import { AutoRefresh } from "@/components/public/AutoRefresh";
 import { Collapsible } from "@/components/public/Collapsible";
@@ -22,20 +20,43 @@ import {
 
 export const dynamic = "force-dynamic";
 
+export async function generateMetadata({
+  params,
+}: {
+  params: Promise<{ tournamentId: string }>;
+}): Promise<Metadata> {
+  const { tournamentId } = await params;
+  const data = await getTournamentWithClub(tournamentId);
+  if (!data) return {};
+  const { tournament, club } = data;
+  const t = createT(await getLocale());
+  const isActive = tournament.status === "active";
+  const winner = isActive ? null : computeStandings(tournament.entrants, tournament.rounds)[0];
+  const description = [
+    club?.name,
+    formatLabel(t, tournament.type),
+    isActive ? t("tournamentPage.live") : winner ? `🏆 ${winner.name}` : undefined,
+  ]
+    .filter(Boolean)
+    .join(" · ");
+  return {
+    title: tournament.name,
+    description,
+    openGraph: { title: tournament.name, description },
+    twitter: { card: "summary_large_image", title: tournament.name, description },
+  };
+}
+
 export default async function TournamentPage({
   params,
 }: {
   params: Promise<{ tournamentId: string }>;
 }) {
   const { tournamentId } = await params;
-  if (!isValidObjectId(tournamentId)) notFound();
+  const data = await getTournamentWithClub(tournamentId);
+  if (!data) notFound();
+  const { tournament, club } = data;
   const t = createT(await getLocale());
-  await dbConnect();
-  const doc = await Tournament.findById(tournamentId).lean();
-  if (!doc) notFound();
-  const tournament = serialize<TournamentJSON>(doc);
-  const clubRaw = await Club.findById(tournament.clubId).lean();
-  const club = clubRaw ? serialize<ClubJSON>(clubRaw) : null;
 
   const map = entrantMap(tournament.entrants);
   const standings = computeStandings(tournament.entrants, tournament.rounds);

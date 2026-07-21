@@ -187,6 +187,15 @@ Public (slice B): `/` (landing), `/clubs`, `/club/[slug]`,
 `/t/[tournamentId]`, `/t/[tournamentId]/court/[court]` (court label
 URL-encoded), `/t/[tournamentId]/results`.
 
+`/club/[slug]`, `/t/[tournamentId]` and `/t/[tournamentId]/results` each
+export `generateMetadata` (title/description/OG/Twitter tags) and a sibling
+`opengraph-image.tsx` (Next `ImageResponse`, nodejs runtime, brand chrome in
+`src/lib/og.tsx`, fonts in `src/assets/fonts/` — Inter static TTF, needed for
+Polish/Spanish diacritic glyph coverage that next/og's default font lacks).
+`generateMetadata` and the page body share one DB read via the `cache()`-
+wrapped loaders in `src/lib/loaders.ts` — reuse those instead of querying
+`Tournament`/`Club` directly in these three files.
+
 Manager (slice C): `/manager`, `/manager/players`, `/manager/ranking`,
 `/manager/tournaments/new`, `/manager/tournaments/[tournamentId]`.
 Club selection via `?club=<clubId>` query param (default: first of

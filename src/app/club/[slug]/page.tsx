@@ -1,19 +1,45 @@
+import type { Metadata } from "next";
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import { dbConnect } from "@/lib/db";
-import { Club, Tournament } from "@/lib/models";
-import { serialize, type ClubJSON, type TournamentJSON } from "@/lib/types";
+import { Tournament } from "@/lib/models";
+import { serialize, type TournamentJSON } from "@/lib/types";
 import { computeStandings } from "@/lib/engine";
 import { computeClubRanking } from "@/lib/ranking";
 import { formatLabel } from "@/lib/i18n/formats";
 import { createT } from "@/lib/i18n";
 import { getLocale } from "@/lib/i18n/server";
+import { getClubBySlug } from "@/lib/loaders";
 import { Badge, EmptyState, PageHeader } from "@/components/ui";
 import { cn } from "@/lib/cn";
 import { formatDate } from "@/components/public/helpers";
 import { medalFor } from "@/components/public/StandingsTable";
 
 export const dynamic = "force-dynamic";
+
+export async function generateMetadata({
+  params,
+}: {
+  params: Promise<{ slug: string }>;
+}): Promise<Metadata> {
+  const { slug } = await params;
+  const club = await getClubBySlug(slug);
+  if (!club) return {};
+  const ranking = await computeClubRanking(club._id);
+  const description = [
+    club.city,
+    club.description,
+    ranking[0] ? `🥇 ${ranking[0].playerName}` : undefined,
+  ]
+    .filter(Boolean)
+    .join(" · ");
+  return {
+    title: club.name,
+    description,
+    openGraph: { title: club.name, description },
+    twitter: { card: "summary_large_image", title: club.name, description },
+  };
+}
 
 export default async function ClubPage({
   params,
@@ -22,10 +48,8 @@ export default async function ClubPage({
 }) {
   const { slug } = await params;
   const t = createT(await getLocale());
-  await dbConnect();
-  const clubRaw = await Club.findOne({ slug }).lean();
-  if (!clubRaw) notFound();
-  const club = serialize<ClubJSON>(clubRaw);
+  const club = await getClubBySlug(slug);
+  if (!club) notFound();
 
   const tournamentsRaw = await Tournament.find({ clubId: club._id })
     .sort({ playedAt: -1 })

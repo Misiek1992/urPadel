@@ -48,6 +48,8 @@ export async function POST(
 
     // Bulk import: { names: string[] }
     if (Array.isArray(body.names)) {
+      if (body.names.length > 500)
+        throw new HttpError(400, "Import at most 500 players at a time.");
       const seen = new Set<string>();
       const candidates: { name: string; nameLower: string }[] = [];
       for (const raw of body.names) {

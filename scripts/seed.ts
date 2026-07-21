@@ -147,7 +147,18 @@ async function simulateFinishedTournament(clubId: mongoose.Types.ObjectId, spec:
 
 async function main() {
   await dbConnect();
-  console.log(`Connected to MongoDB (db: ${process.env.MONGODB_DB || "urpadel"})`);
+  const dbName = mongoose.connection.db?.databaseName ?? process.env.MONGODB_DB ?? "urpadel";
+  console.log(`Connected to MongoDB (db: ${dbName})`);
+
+  const forced = process.env.SEED_FORCE === "yes" || process.argv.includes("--force");
+  if (!forced) {
+    console.error(
+      `\nThis will WIPE ALL DATA in database "${dbName}" and replace it with demo data.\n` +
+        `Re-run with --force, or SEED_FORCE=yes, to confirm.`
+    );
+    await mongoose.disconnect();
+    process.exit(1);
+  }
 
   await Promise.all([
     Club.deleteMany({}),

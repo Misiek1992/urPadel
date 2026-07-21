@@ -11,8 +11,15 @@ import {
 import { logAction } from "@/lib/audit";
 import { serialize, type TournamentJSON } from "@/lib/types";
 import type { EngineRound } from "@/lib/engine";
+import { clientIp, rateLimit } from "@/lib/rate-limit";
 
 export const dynamic = "force-dynamic";
+
+// This is the one fully public write in the app (no auth required for a
+// fresh current-round score), so it's the one endpoint worth guarding
+// against casual spam/stuck-retry-loop abuse.
+const RESULT_LIMIT = 20;
+const RESULT_WINDOW_MS = 60_000;
 
 export async function POST(
   req: NextRequest,
@@ -22,6 +29,8 @@ export async function POST(
     const { tournamentId } = await params;
     if (!isValidObjectId(tournamentId))
       throw new HttpError(404, "Tournament not found.");
+    if (!rateLimit(`result:${clientIp(req)}:${tournamentId}`, RESULT_LIMIT, RESULT_WINDOW_MS))
+      throw new HttpError(429, "Too many requests — please slow down and try again shortly.");
     await dbConnect();
 
     const tournament = await Tournament.findById(tournamentId);

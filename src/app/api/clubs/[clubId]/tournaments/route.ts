@@ -79,6 +79,8 @@ export async function POST(
       throw new HttpError(400, "Match points must be a whole number between 4 and 128.");
 
     // Courts: trimmed, non-empty, de-duplicated (order preserved).
+    if (Array.isArray(body.courts) && body.courts.length > 32)
+      throw new HttpError(400, "A tournament can have at most 32 courts.");
     const courts: string[] = [];
     if (Array.isArray(body.courts)) {
       for (const raw of body.courts) {
@@ -90,6 +92,8 @@ export async function POST(
     // Entrants: assign server-side ids; team formats need exactly 2 players.
     const team = isTeamType(type);
     const entrantsIn = Array.isArray(body.entrants) ? body.entrants : [];
+    if (entrantsIn.length > 128)
+      throw new HttpError(400, "A tournament can have at most 128 entrants.");
     const entrants: Entrant[] = [];
     const usedIds = new Set<string>();
     const usedNames = new Set<string>();

@@ -227,7 +227,18 @@ export default async function ClubPage({
                         >
                           {medal ?? row.position}
                         </td>
-                        <td className="font-semibold text-white">{row.playerName}</td>
+                        <td className="font-semibold text-white">
+                          {row.playerId ? (
+                            <Link
+                              href={`/club/${club.slug}/player/${row.playerId}`}
+                              className="hover:text-volt-300"
+                            >
+                              {row.playerName}
+                            </Link>
+                          ) : (
+                            row.playerName
+                          )}
+                        </td>
                         <td className="text-right text-base font-extrabold text-volt-300">
                           {row.total}
                         </td>

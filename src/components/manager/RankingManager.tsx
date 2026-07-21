@@ -3,6 +3,7 @@
 // Ranking management: expandable per-player entry lists with point editing,
 // entry deletion and manual adjustments.
 
+import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useState, type FormEvent } from "react";
 import {
@@ -39,10 +40,12 @@ const MEDALS = ["🥇", "🥈", "🥉"];
 
 export function RankingManager({
   clubId,
+  clubSlug,
   rows,
   roster,
 }: {
   clubId: string;
+  clubSlug: string;
   rows: RankingRowJSON[];
   roster: ClubPlayerJSON[];
 }) {
@@ -216,7 +219,18 @@ export function RankingManager({
                       >
                         {MEDALS[row.position - 1] ?? row.position}
                       </td>
-                      <td className="font-semibold text-white">{row.playerName}</td>
+                      <td className="font-semibold text-white">
+                        {row.playerId ? (
+                          <Link
+                            href={`/club/${clubSlug}/player/${row.playerId}`}
+                            className="hover:text-volt-300"
+                          >
+                            {row.playerName}
+                          </Link>
+                        ) : (
+                          row.playerName
+                        )}
+                      </td>
                       <td className="text-right text-base font-extrabold text-volt-300">
                         {row.total}
                       </td>

@@ -39,7 +39,12 @@ export default async function ManagerRankingPage({
       <div className="-mt-2 mb-8">
         <ManagerNav clubs={viewer.managedClubs} activeClubId={activeClub._id} />
       </div>
-      <RankingManager clubId={activeClub._id} rows={rows} roster={roster} />
+      <RankingManager
+        clubId={activeClub._id}
+        clubSlug={activeClub.slug}
+        rows={rows}
+        roster={roster}
+      />
     </div>
   );
 }

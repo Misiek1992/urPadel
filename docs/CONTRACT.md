@@ -184,6 +184,8 @@ Every mutation calls `logAction` with a concise action slug
 ## Route map (pages)
 
 Public (slice B): `/` (landing), `/clubs`, `/club/[slug]`,
+`/club/[slug]/player/[playerId]` (ClubPlayer `_id`; entries resolved by
+case-insensitive `playerName` match, same as `computeClubRanking`),
 `/t/[tournamentId]`, `/t/[tournamentId]/court/[court]` (court label
 URL-encoded), `/t/[tournamentId]/results`.
 

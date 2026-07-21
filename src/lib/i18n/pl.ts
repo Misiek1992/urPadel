@@ -43,6 +43,14 @@ const pl: Dictionary = {
     contactHeading: "Kontakt",
     contactText: "Masz pytania, uwagi lub pomysły? Napisz do nas:",
   },
+  error: {
+    eyebrow: "Coś poszło nie tak",
+    title: "Ta piłka wyszła w aut",
+    subtitle:
+      "Podczas ładowania tej strony wystąpił nieoczekiwany błąd. Możesz spróbować ponownie albo wrócić na bezpieczny grunt.",
+    retry: "Spróbuj ponownie",
+    backHome: "Wróć na stronę główną",
+  },
   notFound: {
     eyebrow: "404",
     title: "Ten kort jest pusty",

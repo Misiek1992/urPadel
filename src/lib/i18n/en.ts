@@ -35,6 +35,14 @@ const en = {
     contactHeading: "Contact",
     contactText: "Questions, feedback or ideas? Get in touch:",
   },
+  error: {
+    eyebrow: "Something went wrong",
+    title: "That shot went out",
+    subtitle:
+      "An unexpected error occurred loading this page. You can try again, or head back to safer ground.",
+    retry: "Try again",
+    backHome: "Back to home",
+  },
   notFound: {
     eyebrow: "404",
     title: "This court is empty",

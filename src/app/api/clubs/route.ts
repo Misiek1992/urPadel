@@ -19,7 +19,10 @@ function slugify(input: string): string {
 export async function GET() {
   try {
     await dbConnect();
-    const clubs = await Club.find({}).sort({ name: 1 }).lean();
+    // Public, unauthenticated endpoint — never expose managerEmails (personal
+    // addresses, scrapable). The superadmin UI reads managerEmails via
+    // server-side props on its own gated page, not through this route.
+    const clubs = await Club.find({}, "-managerEmails").sort({ name: 1 }).lean();
     return NextResponse.json({ clubs: serialize<ClubJSON[]>(clubs) });
   } catch (e) {
     return apiError(e);

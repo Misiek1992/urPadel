@@ -189,6 +189,7 @@ const en = {
   scoreForm: {
     hint: "Rally points — must add up to {points}",
     save: "Save",
+    saved: "✓ Saved",
     invalidNumbers: "Enter whole numbers of 0 or more.",
     sumMismatch: "Scores must add up to {points} (currently {sum}).",
     networkError: "Network error — please try again.",

@@ -1,7 +1,8 @@
 import Link from "next/link";
 import { dbConnect } from "@/lib/db";
-import { Club, ClubPlayer, Tournament } from "@/lib/models";
+import { Club } from "@/lib/models";
 import { serialize, type ClubJSON } from "@/lib/types";
+import { getClubStats, statsFor } from "@/lib/club-stats";
 import { pointsForPosition, RANKING_WINDOW_DAYS } from "@/lib/ranking";
 import { formatOptions } from "@/lib/i18n/formats";
 import { createT } from "@/lib/i18n";
@@ -43,15 +44,8 @@ export default async function LandingPage() {
   await dbConnect();
   const clubsRaw = await Club.find({}).sort({ name: 1 }).limit(6).lean();
   const clubs = serialize<ClubJSON[]>(clubsRaw);
-  const clubStats = await Promise.all(
-    clubs.map(async (club) => {
-      const [players, tournaments] = await Promise.all([
-        ClubPlayer.countDocuments({ clubId: club._id }),
-        Tournament.countDocuments({ clubId: club._id }),
-      ]);
-      return { club, players, tournaments };
-    })
-  );
+  const statsMap = await getClubStats(clubs.map((c) => c._id));
+  const clubStats = clubs.map((club) => ({ club, ...statsFor(statsMap, club._id) }));
 
   const howItWorks = [
     { step: "1", title: t("home.how1Title"), text: t("home.how1Text") },

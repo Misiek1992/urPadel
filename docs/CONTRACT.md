@@ -152,11 +152,17 @@ From `@/lib/engine`:
 
 From `@/lib/ranking`:
 - `pointsForPosition(position)`, `RANKING_WINDOW_DAYS`
-- `awardTournamentPoints(tournament, {date?})`
-- `computeClubRanking(clubId): Promise<RankingRowJSON[]>`
+- `awardTournamentPoints(tournament, {date?})` — batched (one player bulk-upsert
+  + one `insertMany`), not a per-player loop
+- `computeClubRanking(clubId): Promise<RankingRowJSON[]>` — wrapped in React
+  `cache()`, so calling it twice in one request (metadata + body) hits the DB once
+
+From `@/lib/club-stats`: `getClubStats(clubIds): Promise<Map<id, {players,tournaments,active}>>`
++ `statsFor(map, id)` — for club-listing surfaces (`/clubs`, home). Two grouped
+aggregations total; never loop per-club count queries (the old N+1).
 
 From `@/lib/auth`:
-- `getViewer(): Promise<ViewerJSON>`, `getSessionEmail()`, `isSuperAdminEmail(email)`
+- `getViewer(): Promise<ViewerJSON>`, `getSessionEmail()`, `getSessionName()`, `isSuperAdminEmail(email)`
 - `requireSuperAdmin(): Promise<string>`, `requireManagerOf(clubId): Promise<string>` (throw `HttpError`)
 - `apiError(e): NextResponse`, `DEFAULT_SUPERADMIN`
 
@@ -174,7 +180,7 @@ All routes under `src/app/api/`. Auth column: `public` (none), `manager`
 | Method & path | Auth | Body → Response |
 |---|---|---|
 | `GET /api/me` | public | → `ViewerJSON` |
-| `GET /api/clubs` | public | → `{ clubs: ClubJSON[] }` |
+| `GET /api/clubs` | public | → `{ clubs: ClubJSON[] }` — **excludes `managerEmails`** (`-managerEmails` projection): public endpoint, manager addresses must not be exposed. The superadmin UI reads `managerEmails` via its own gated server-side props |
 | `POST /api/clubs` | superadmin | `{name, slug?, city?, description?}` → `{club}` (slug auto from name if absent, lowercase kebab; 409 if taken) |
 | `PATCH /api/clubs/[clubId]` | manager | `{name?, city?, description?}` → `{club}` |
 | `DELETE /api/clubs/[clubId]` | superadmin | → `{ok:true}` (also deletes its players/tournaments/ranking entries) |

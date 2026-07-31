@@ -197,6 +197,7 @@ const pl: Dictionary = {
   scoreForm: {
     hint: "Punkty z akcji — muszą sumować się do {points}",
     save: "Zapisz",
+    saved: "✓ Zapisano",
     invalidNumbers: "Podaj liczby całkowite większe lub równe 0.",
     sumMismatch: "Wyniki muszą sumować się do {points} (obecnie {sum}).",
     networkError: "Błąd sieci — spróbuj ponownie.",

@@ -1,7 +1,8 @@
 import Link from "next/link";
 import { dbConnect } from "@/lib/db";
-import { Club, ClubPlayer, Tournament } from "@/lib/models";
+import { Club } from "@/lib/models";
 import { serialize, type ClubJSON } from "@/lib/types";
+import { getClubStats, statsFor } from "@/lib/club-stats";
 import { createT } from "@/lib/i18n";
 import { getLocale } from "@/lib/i18n/server";
 import { EmptyState, PageHeader } from "@/components/ui";
@@ -16,16 +17,8 @@ export default async function ClubsPage() {
   await dbConnect();
   const clubsRaw = await Club.find({}).sort({ name: 1 }).lean();
   const clubs = serialize<ClubJSON[]>(clubsRaw);
-  const stats = await Promise.all(
-    clubs.map(async (club) => {
-      const [players, tournaments, active] = await Promise.all([
-        ClubPlayer.countDocuments({ clubId: club._id }),
-        Tournament.countDocuments({ clubId: club._id }),
-        Tournament.countDocuments({ clubId: club._id, status: "active" }),
-      ]);
-      return { club, players, tournaments, active };
-    })
-  );
+  const statsMap = await getClubStats(clubs.map((c) => c._id));
+  const stats = clubs.map((club) => ({ club, ...statsFor(statsMap, club._id) }));
 
   return (
     <div>

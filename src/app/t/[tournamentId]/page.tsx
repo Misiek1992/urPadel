@@ -8,7 +8,7 @@ import { getLocale } from "@/lib/i18n/server";
 import { getTournamentWithClub } from "@/lib/loaders";
 import { sanitizeEntrantsForPublic } from "@/lib/privacy";
 import { Badge, PageHeader } from "@/components/ui";
-import { AutoRefresh } from "@/components/public/AutoRefresh";
+import { LiveRefresh } from "@/components/public/LiveRefresh";
 import { Collapsible } from "@/components/public/Collapsible";
 import { ScoreForm } from "@/components/public/ScoreForm";
 import { StandingsTable } from "@/components/public/StandingsTable";
@@ -70,7 +70,12 @@ export default async function TournamentPage({
 
   return (
     <div className="space-y-10">
-      <AutoRefresh enabled={isActive} intervalMs={10000} />
+      <LiveRefresh
+        tournamentId={tournament._id}
+        initialUpdatedAt={tournament.updatedAt}
+        enabled={isActive}
+        intervalMs={10000}
+      />
 
       <PageHeader
         title={tournament.name}

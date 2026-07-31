@@ -42,6 +42,7 @@ export function ScoreForm({
   );
   const [bTouched, setBTouched] = useState(initialScoreB != null);
   const [saving, setSaving] = useState(false);
+  const [saved, setSaved] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [pin, setPin] = useState("");
   const [pinRequired, setPinRequired] = useState(false);
@@ -104,6 +105,11 @@ export function ScoreForm({
       if (pinRequired && pin) {
         sessionStorage.setItem(pinStorageKey(tournamentId), pin);
       }
+      // Acknowledge immediately. The parent (tournament / court page) will
+      // re-render this match as scored and unmount the form once its refresh
+      // lands, but that has a network+render gap — the confirmation bridges it
+      // so the person at the net isn't left staring at a spinner.
+      setSaved(true);
       onSaved?.();
       router.refresh();
     } catch {
@@ -160,12 +166,12 @@ export function ScoreForm({
         />
         <Button
           type="submit"
-          disabled={saving}
+          disabled={saving || saved}
           size={big ? "lg" : "sm"}
-          className={cn(xl ? "ml-4" : "ml-2")}
+          className={cn(xl ? "ml-4" : "ml-2", saved && "!bg-emerald-500 !text-white")}
         >
           {saving && <Spinner className={xl ? "h-5 w-5" : "h-3.5 w-3.5"} />}
-          {t("scoreForm.save")}
+          {saved ? t("scoreForm.saved") : t("scoreForm.save")}
         </Button>
       </div>
       {pinRequired && (

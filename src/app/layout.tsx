@@ -1,4 +1,5 @@
 import type { Metadata } from "next";
+import localFont from "next/font/local";
 import Link from "next/link";
 import { ClerkProvider } from "@clerk/nextjs";
 import { plPL } from "@clerk/localizations";
@@ -8,6 +9,22 @@ import { LocaleProvider } from "@/components/i18n/LocaleProvider";
 import { createT, getDictionary } from "@/lib/i18n";
 import { getLocale } from "@/lib/i18n/server";
 import "./globals.css";
+
+// Self-host Inter (already bundled for the OG images) as the app typeface, so
+// every visitor sees the intended design — the previous `Avenir Next` stack
+// only rendered as designed on Apple devices and fell back to Arial on
+// Windows/Android. `display: swap` + preloaded local files means no layout
+// shift and no external request.
+const inter = localFont({
+  src: [
+    { path: "../assets/fonts/Inter-Regular.ttf", weight: "400", style: "normal" },
+    { path: "../assets/fonts/Inter-SemiBold.ttf", weight: "600", style: "normal" },
+    { path: "../assets/fonts/Inter-Bold.ttf", weight: "700", style: "normal" },
+    { path: "../assets/fonts/Inter-ExtraBold.ttf", weight: "800", style: "normal" },
+  ],
+  variable: "--font-inter",
+  display: "swap",
+});
 
 const siteUrl = process.env.NEXT_PUBLIC_SITE_URL || "http://localhost:3000";
 
@@ -43,7 +60,7 @@ export default async function RootLayout({
       }}
     >
       <LocaleProvider locale={locale} dict={dict}>
-        <html lang={locale}>
+        <html lang={locale} className={inter.variable}>
           <body>
             <SiteHeader />
             <main className="mx-auto w-full max-w-6xl px-4 py-8 sm:px-6">

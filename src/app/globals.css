@@ -13,16 +13,15 @@
   --color-volt-600: #a2c614;
   --color-ocean-400: #4aa8ff;
   --color-ocean-500: #2f7de1;
-  --font-sans: "Avenir Next", "Helvetica Neue", ui-sans-serif, system-ui,
-    -apple-system, "Segoe UI", Roboto, sans-serif;
+  --font-sans: var(--font-inter), "Avenir Next", "Helvetica Neue",
+    ui-sans-serif, system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
 }
 
 body {
-  @apply min-h-screen bg-navy-950 text-slate-200 antialiased;
+  @apply min-h-screen bg-navy-950 font-sans text-slate-200 antialiased;
   background-image:
     radial-gradient(1200px 600px at 85% -10%, rgba(217, 249, 84, 0.07), transparent 60%),
     radial-gradient(900px 520px at -10% 15%, rgba(47, 125, 225, 0.12), transparent 55%);
-  background-attachment: fixed;
 }
 
 @layer components {
@@ -91,5 +90,27 @@ body {
   }
   .section-title {
     @apply text-lg font-bold text-white;
+  }
+}
+
+/* Keyboard focus: a theme-matched ring on any interactive element. Mouse
+   clicks don't trigger :focus-visible, so this only shows for keyboard/AT
+   users. Inputs keep their own box-shadow ring (from .input); the outline
+   sits outside it and doesn't conflict. */
+:focus-visible {
+  outline: 2px solid var(--color-volt-400);
+  outline-offset: 2px;
+}
+
+/* Respect the OS "reduce motion" setting: neutralize the live-badge pulse,
+   collapsible transitions, hover fades, etc. for users who ask for it. */
+@media (prefers-reduced-motion: reduce) {
+  *,
+  ::before,
+  ::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+    scroll-behavior: auto !important;
   }
 }

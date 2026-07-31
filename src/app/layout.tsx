@@ -70,12 +70,20 @@ export default async function RootLayout({
               <div className="mx-auto flex w-full max-w-6xl flex-wrap items-center justify-between gap-4 px-4 py-8 text-sm text-slate-500 sm:px-6">
                 <Logo size={24} />
                 <p>{t("footer.tagline")}</p>
-                <Link
-                  href="/about"
-                  className="font-semibold text-slate-400 hover:text-volt-300"
-                >
-                  {t("nav.about")}
-                </Link>
+                <div className="flex items-center gap-4">
+                  <Link
+                    href="/data-deletion"
+                    className="font-semibold text-slate-400 hover:text-volt-300"
+                  >
+                    {t("dataDeletion.footerLink")}
+                  </Link>
+                  <Link
+                    href="/about"
+                    className="font-semibold text-slate-400 hover:text-volt-300"
+                  >
+                    {t("nav.about")}
+                  </Link>
+                </div>
               </div>
             </footer>
           </body>

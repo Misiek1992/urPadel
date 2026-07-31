@@ -35,6 +35,31 @@ const en = {
     contactHeading: "Contact",
     contactText: "Questions, feedback or ideas? Get in touch:",
   },
+  dataDeletion: {
+    footerLink: "Delete my data",
+    title: "Delete my data",
+    subtitle: "Request permanent removal of your personal data from urPadel.",
+    intro:
+      "Enter the email address linked to your player profile. We'll send you a confirmation link — deletion only happens after you click it, so nobody can remove your data without access to your inbox.",
+    scopeRemoved: "Removes your player profile, saved email and ranking-point history across all clubs.",
+    scopeKept:
+      "Recorded match scores in finished tournaments stay — they're shared results and only show a first name with an initial.",
+    emailLabel: "Your email address",
+    emailPlaceholder: "you@example.com",
+    requestButton: "Send confirmation link",
+    sentTitle: "Check your inbox",
+    sentBody:
+      "If {email} has data with us, we've sent a confirmation link there. It expires in 1 hour.",
+    confirmTitle: "Confirm data deletion",
+    confirmWarning:
+      "This permanently deletes your player profile, saved email and ranking history across all clubs. It cannot be undone.",
+    confirmButton: "Permanently delete my data",
+    doneTitle: "Your data has been deleted",
+    doneBody:
+      "Removed {players} player profile(s) and {entries} ranking entr(y/ies). You can close this page.",
+    invalidToken:
+      "This link is invalid or has expired. Please start again from the “Delete my data” page.",
+  },
   error: {
     eyebrow: "Something went wrong",
     title: "That shot went out",

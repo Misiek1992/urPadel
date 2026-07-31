@@ -43,6 +43,32 @@ const pl: Dictionary = {
     contactHeading: "Kontakt",
     contactText: "Masz pytania, uwagi lub pomysły? Napisz do nas:",
   },
+  dataDeletion: {
+    footerLink: "Usuń moje dane",
+    title: "Usuń moje dane",
+    subtitle: "Poproś o trwałe usunięcie swoich danych osobowych z urPadel.",
+    intro:
+      "Podaj adres e-mail powiązany z Twoim profilem gracza. Wyślemy link potwierdzający — usunięcie nastąpi dopiero po jego kliknięciu, więc nikt nie usunie Twoich danych bez dostępu do Twojej skrzynki.",
+    scopeRemoved:
+      "Usuwa Twój profil gracza, zapisany e-mail i historię punktów rankingowych we wszystkich klubach.",
+    scopeKept:
+      "Zapisane wyniki meczów w zakończonych turniejach pozostają — to wspólne wyniki i pokazują tylko imię z inicjałem nazwiska.",
+    emailLabel: "Twój adres e-mail",
+    emailPlaceholder: "ty@example.com",
+    requestButton: "Wyślij link potwierdzający",
+    sentTitle: "Sprawdź skrzynkę",
+    sentBody:
+      "Jeśli {email} ma u nas dane, wysłaliśmy tam link potwierdzający. Wygasa za 1 godzinę.",
+    confirmTitle: "Potwierdź usunięcie danych",
+    confirmWarning:
+      "To trwale usuwa Twój profil gracza, zapisany e-mail i historię rankingu we wszystkich klubach. Tej operacji nie można cofnąć.",
+    confirmButton: "Trwale usuń moje dane",
+    doneTitle: "Twoje dane zostały usunięte",
+    doneBody:
+      "Usunięto {players} profil(e) gracza i {entries} wpis(y) rankingowe. Możesz zamknąć tę stronę.",
+    invalidToken:
+      "Ten link jest nieprawidłowy lub wygasł. Zacznij ponownie od strony „Usuń moje dane”.",
+  },
   error: {
     eyebrow: "Coś poszło nie tak",
     title: "Ta piłka wyszła w aut",

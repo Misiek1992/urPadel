@@ -3,7 +3,13 @@
 // call uses a fresh random IV, so encrypting the same plaintext twice
 // produces different ciphertext; the auth tag detects any tampering with
 // the stored value.
-import { createCipheriv, createDecipheriv, randomBytes } from "node:crypto";
+import {
+  createCipheriv,
+  createDecipheriv,
+  createHmac,
+  randomBytes,
+  timingSafeEqual,
+} from "node:crypto";
 
 const ALGORITHM = "aes-256-gcm";
 const IV_LENGTH = 12;
@@ -48,4 +54,16 @@ export function decrypt(payload: string): string {
   decipher.setAuthTag(authTag);
   const plaintext = Buffer.concat([decipher.update(ciphertext), decipher.final()]);
   return plaintext.toString("utf8");
+}
+
+/** HMAC-SHA256 signature of `payload` (base64url), keyed by the same secret. */
+export function hmac(payload: string): string {
+  return createHmac("sha256", getKey()).update(payload).digest("base64url");
+}
+
+/** Constant-time check that `sig` is a valid `hmac(payload)`. */
+export function verifyHmac(payload: string, sig: string): boolean {
+  const expected = Buffer.from(hmac(payload));
+  const actual = Buffer.from(sig);
+  return expected.length === actual.length && timingSafeEqual(expected, actual);
 }

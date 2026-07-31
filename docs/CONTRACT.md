@@ -180,6 +180,8 @@ All routes under `src/app/api/`. Auth column: `public` (none), `manager`
 | Method & path | Auth | Body → Response |
 |---|---|---|
 | `GET /api/me` | public | → `ViewerJSON` |
+| `POST /api/data-deletion/request` | public | `{email}` → `{ok:true}` — GDPR erasure. Validates format, rate-limited (5/h per IP). Only emails a signed, 1h HMAC confirmation link (`src/lib/data-deletion.ts`, keyed by `CREDENTIALS_ENCRYPTION_KEY`, sent via `src/lib/email.ts`/Resend) **if** an address actually has data — but returns the same `{ok:true}` regardless, so it never reveals existence. Sends nothing / deletes nothing itself |
+| `POST /api/data-deletion/confirm` | public (token-gated) | `{token}` → `{deleted:{players,rankingEntries}}` — verifies the HMAC token (400 `code:"invalid_token"` if bad/expired) then runs `deletePlayerDataForEmail`: removes `ClubPlayer` docs carrying that email + their `RankingEntry` records across all clubs. Never touches `Tournament.entrants`/match scores, `Club.managerEmails`, or `AppUser`. Idempotent. Audit-logged with a masked email |
 | `GET /api/clubs` | public | → `{ clubs: ClubJSON[] }` — **excludes `managerEmails`** (`-managerEmails` projection): public endpoint, manager addresses must not be exposed. The superadmin UI reads `managerEmails` via its own gated server-side props |
 | `POST /api/clubs` | superadmin | `{name, slug?, city?, description?}` → `{club}` (slug auto from name if absent, lowercase kebab; 409 if taken) |
 | `PATCH /api/clubs/[clubId]` | manager | `{name?, city?, description?}` → `{club}` |
@@ -239,7 +241,10 @@ Public (slice B): `/` (landing), `/clubs`, `/club/[slug]`,
 `/club/[slug]/player/[playerId]` (ClubPlayer `_id`; entries resolved by
 case-insensitive `playerName` match, same as `computeClubRanking`),
 `/t/[tournamentId]`, `/t/[tournamentId]/court/[court]` (court label
-URL-encoded), `/t/[tournamentId]/results`.
+URL-encoded), `/t/[tournamentId]/results`, `/data-deletion` (GDPR erasure
+request form) + `/data-deletion/confirm?token=` (the emailed link lands here
+and only deletes on an explicit button-press POST, never on page load, so
+email/link prefetchers can't trigger it).
 
 `/club/[slug]`, `/t/[tournamentId]` and `/t/[tournamentId]/results` each
 export `generateMetadata` (title/description/OG/Twitter tags) and a sibling

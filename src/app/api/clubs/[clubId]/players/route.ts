@@ -5,6 +5,7 @@ import { Club, ClubPlayer } from "@/lib/models";
 import { apiError, HttpError, requireManagerOf } from "@/lib/auth";
 import { logAction } from "@/lib/audit";
 import { serialize, type ClubPlayerJSON } from "@/lib/types";
+import { sanitizePlayersForPublic } from "@/lib/privacy";
 
 export const dynamic = "force-dynamic";
 
@@ -19,7 +20,9 @@ export async function GET(
     if (!(await Club.exists({ _id: clubId })))
       throw new HttpError(404, "Club not found.");
     const players = await ClubPlayer.find({ clubId }).sort({ nameLower: 1 }).lean();
-    return NextResponse.json({ players: serialize<ClubPlayerJSON[]>(players) });
+    return NextResponse.json({
+      players: sanitizePlayersForPublic(serialize<ClubPlayerJSON[]>(players)),
+    });
   } catch (e) {
     return apiError(e);
   }

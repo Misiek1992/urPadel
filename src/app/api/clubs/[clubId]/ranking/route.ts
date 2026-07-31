@@ -4,6 +4,7 @@ import { dbConnect } from "@/lib/db";
 import { Club } from "@/lib/models";
 import { apiError, HttpError } from "@/lib/auth";
 import { computeClubRanking } from "@/lib/ranking";
+import { sanitizeRankingForPublic } from "@/lib/privacy";
 
 export const dynamic = "force-dynamic";
 
@@ -17,7 +18,7 @@ export async function GET(
     await dbConnect();
     if (!(await Club.exists({ _id: clubId })))
       throw new HttpError(404, "Club not found.");
-    const rows = await computeClubRanking(clubId);
+    const rows = sanitizeRankingForPublic(await computeClubRanking(clubId));
     return NextResponse.json({ rows });
   } catch (e) {
     return apiError(e);

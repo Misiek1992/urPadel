@@ -10,6 +10,7 @@ import { RANKING_WINDOW_DAYS } from "@/lib/ranking";
 import { createT } from "@/lib/i18n";
 import { getLocale } from "@/lib/i18n/server";
 import { getClubBySlug } from "@/lib/loaders";
+import { truncateSurname } from "@/lib/privacy";
 import { EmptyState, PageHeader, StatCard } from "@/components/ui";
 import { formatDate } from "@/components/public/helpers";
 
@@ -47,7 +48,7 @@ export async function generateMetadata({
   if (!club) return {};
   const data = await getPlayerWithEntries(club._id, playerId);
   if (!data) return {};
-  return { title: `${data.player.name} · ${club.name}` };
+  return { title: `${truncateSurname(data.player.name)} · ${club.name}` };
 }
 
 export default async function PlayerPage({
@@ -87,7 +88,7 @@ export default async function PlayerPage({
   return (
     <div className="space-y-10">
       <PageHeader
-        title={player.name}
+        title={truncateSurname(player.name)}
         subtitle={
           <Link
             href={`/club/${club.slug}`}

@@ -50,6 +50,7 @@ export interface TournamentJSON {
   pointsAwarded: boolean;
   playedAt: string;
   finishedAt?: string | null;
+  createdByEmail?: string | null;
   createdAt: string;
   updatedAt: string;
 }

@@ -10,6 +10,7 @@ import {
   type TournamentJSON,
   type TournamentType,
 } from "@/lib/types";
+import { sanitizeEntrantsForPublic } from "@/lib/privacy";
 import {
   TOURNAMENT_TYPES,
   generateNextRound,
@@ -36,9 +37,11 @@ export async function GET(
     const tournaments = await Tournament.find({ clubId })
       .sort({ playedAt: -1 })
       .lean();
-    return NextResponse.json({
-      tournaments: serialize<TournamentJSON[]>(tournaments),
-    });
+    const publicTournaments = serialize<TournamentJSON[]>(tournaments).map((tour) => ({
+      ...tour,
+      entrants: sanitizeEntrantsForPublic(tour.entrants),
+    }));
+    return NextResponse.json({ tournaments: publicTournaments });
   } catch (e) {
     return apiError(e);
   }
@@ -158,6 +161,7 @@ export async function POST(
       status: "active",
       pointsAwarded: false,
       playedAt: new Date(),
+      createdByEmail: actorEmail,
       scorePin,
     });
 

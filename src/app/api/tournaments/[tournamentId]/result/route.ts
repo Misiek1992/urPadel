@@ -12,6 +12,7 @@ import { logAction } from "@/lib/audit";
 import { serialize, type TournamentJSON } from "@/lib/types";
 import type { EngineRound } from "@/lib/engine";
 import { clientIp, rateLimit } from "@/lib/rate-limit";
+import { sanitizeEntrantsForPublic } from "@/lib/privacy";
 
 export const dynamic = "force-dynamic";
 
@@ -20,6 +21,10 @@ export const dynamic = "force-dynamic";
 // against casual spam/stuck-retry-loop abuse.
 const RESULT_LIMIT = 20;
 const RESULT_WINDOW_MS = 60_000;
+
+function publicTournament(tournament: TournamentJSON): TournamentJSON {
+  return { ...tournament, entrants: sanitizeEntrantsForPublic(tournament.entrants) };
+}
 
 export async function POST(
   req: NextRequest,
@@ -149,7 +154,9 @@ export async function POST(
       if (!freshMatch)
         throw new HttpError(404, `No match on "${court}" in round ${roundNumber}.`);
       if (freshMatch.scoreA === scoreA && freshMatch.scoreB === scoreB) {
-        return NextResponse.json({ tournament: serialize<TournamentJSON>(fresh) });
+        return NextResponse.json({
+          tournament: publicTournament(serialize<TournamentJSON>(fresh)),
+        });
       }
       throw new HttpError(403, "Only the club manager can edit results.");
     }
@@ -165,7 +172,7 @@ export async function POST(
     });
 
     return NextResponse.json({
-      tournament: serialize<TournamentJSON>(updated),
+      tournament: publicTournament(serialize<TournamentJSON>(updated)),
     });
   } catch (e) {
     return apiError(e);

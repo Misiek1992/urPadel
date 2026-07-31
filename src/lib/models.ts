@@ -96,6 +96,8 @@ const TournamentSchema = new Schema(
     pointsAwarded: { type: Boolean, default: false },
     playedAt: { type: Date, default: Date.now },
     finishedAt: { type: Date, default: null },
+    // Who started this tournament — shown publicly on the tournament page.
+    createdByEmail: { type: String, default: null },
     // Optional 4-6 digit PIN gating public (non-manager) score entry.
     // `select: false` so it's excluded from every query by default — routes
     // that actually need to check it opt in with `.select("+scorePin")`.

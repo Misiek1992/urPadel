@@ -6,6 +6,7 @@ import { formatLabel } from "@/lib/i18n/formats";
 import { createT } from "@/lib/i18n";
 import { getLocale } from "@/lib/i18n/server";
 import { getTournamentWithClub } from "@/lib/loaders";
+import { sanitizeEntrantsForPublic } from "@/lib/privacy";
 import { Badge, PageHeader } from "@/components/ui";
 import { AutoRefresh } from "@/components/public/AutoRefresh";
 import { Collapsible } from "@/components/public/Collapsible";
@@ -31,7 +32,8 @@ export async function generateMetadata({
   const { tournament, club } = data;
   const t = createT(await getLocale());
   const isActive = tournament.status === "active";
-  const winner = isActive ? null : computeStandings(tournament.entrants, tournament.rounds)[0];
+  const publicEntrants = sanitizeEntrantsForPublic(tournament.entrants);
+  const winner = isActive ? null : computeStandings(publicEntrants, tournament.rounds)[0];
   const description = [
     club?.name,
     formatLabel(t, tournament.type),
@@ -58,8 +60,9 @@ export default async function TournamentPage({
   const { tournament, club } = data;
   const t = createT(await getLocale());
 
-  const map = entrantMap(tournament.entrants);
-  const standings = computeStandings(tournament.entrants, tournament.rounds);
+  const publicEntrants = sanitizeEntrantsForPublic(tournament.entrants);
+  const map = entrantMap(publicEntrants);
+  const standings = computeStandings(publicEntrants, tournament.rounds);
   const round = currentRound(tournament);
   const isActive = tournament.status === "active";
   const pastRounds = tournament.rounds.filter((r) => r !== round);
@@ -102,6 +105,9 @@ export default async function TournamentPage({
                     count: tournament.courts.length,
                   })}{" "}
               · {t("tournamentPage.entrantsCount", { count: tournament.entrants.length })}
+              {tournament.createdByEmail && (
+                <> · {t("tournamentPage.startedBy", { email: tournament.createdByEmail })}</>
+              )}
             </span>
           </span>
         }

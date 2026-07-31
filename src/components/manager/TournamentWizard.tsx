@@ -737,13 +737,23 @@ export function TournamentWizard({
 
       {/* Nav buttons */}
       <div className="mt-8 flex items-center justify-between">
-        <Button
-          variant="secondary"
-          onClick={() => setStep((s) => Math.max(0, s - 1))}
-          disabled={step === 0 || submitting}
-        >
-          {t("wizard.back")}
-        </Button>
+        <div className="flex items-center gap-2">
+          <Button
+            variant="secondary"
+            onClick={() => setStep((s) => Math.max(0, s - 1))}
+            disabled={step === 0 || submitting}
+          >
+            {t("wizard.back")}
+          </Button>
+          <Button
+            type="button"
+            variant="ghost"
+            onClick={() => router.push(`/manager?club=${clubId}`)}
+            disabled={submitting}
+          >
+            {t("wizard.cancel")}
+          </Button>
+        </div>
         {step < STEPS.length - 1 ? (
           <Button onClick={() => setStep((s) => s + 1)} disabled={!canNext}>
             {t("wizard.continue")}

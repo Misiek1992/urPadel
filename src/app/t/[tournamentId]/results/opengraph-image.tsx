@@ -9,6 +9,7 @@ import { createT } from "@/lib/i18n";
 import { getLocale } from "@/lib/i18n/server";
 import { formatDate } from "@/components/public/helpers";
 import { OG_SIZE, TournamentOgImage, loadOgFonts } from "@/lib/og";
+import { sanitizeEntrantsForPublic } from "@/lib/privacy";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -58,7 +59,7 @@ export default async function Image({
   const clubRaw = await Club.findById(tournament.clubId).lean();
   const club = clubRaw ? serialize<ClubJSON>(clubRaw) : null;
   const isActive = tournament.status === "active";
-  const standings = computeStandings(tournament.entrants, tournament.rounds);
+  const standings = computeStandings(sanitizeEntrantsForPublic(tournament.entrants), tournament.rounds);
   const podium = standings.slice(0, 3).map((row) => ({ name: row.name, points: row.points }));
 
   return new ImageResponse(

@@ -10,6 +10,7 @@ import { formatLabel } from "@/lib/i18n/formats";
 import { createT } from "@/lib/i18n";
 import { getLocale } from "@/lib/i18n/server";
 import { getClubBySlug } from "@/lib/loaders";
+import { sanitizeEntrantsForPublic, sanitizeRankingForPublic } from "@/lib/privacy";
 import { Badge, EmptyState, PageHeader } from "@/components/ui";
 import { cn } from "@/lib/cn";
 import { formatDate } from "@/components/public/helpers";
@@ -26,7 +27,7 @@ export async function generateMetadata({
   const { slug } = await params;
   const club = await getClubBySlug(slug);
   if (!club) return {};
-  const ranking = await computeClubRanking(club._id);
+  const ranking = sanitizeRankingForPublic(await computeClubRanking(club._id));
   const description = [
     club.city,
     club.description,
@@ -58,7 +59,7 @@ export default async function ClubPage({
   const tournaments = serialize<TournamentJSON[]>(tournamentsRaw);
   const active = tournaments.filter((t2) => t2.status === "active");
   const finished = tournaments.filter((t2) => t2.status === "finished");
-  const ranking = await computeClubRanking(club._id);
+  const ranking = sanitizeRankingForPublic(await computeClubRanking(club._id));
 
   return (
     <div className="space-y-10">
@@ -138,7 +139,10 @@ export default async function ClubPage({
               </thead>
               <tbody>
                 {finished.map((tour) => {
-                  const winner = computeStandings(tour.entrants, tour.rounds)[0];
+                  const winner = computeStandings(
+                    sanitizeEntrantsForPublic(tour.entrants),
+                    tour.rounds
+                  )[0];
                   return (
                     <tr key={tour._id}>
                       <td className="whitespace-nowrap text-xs text-slate-400">

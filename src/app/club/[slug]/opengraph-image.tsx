@@ -4,6 +4,7 @@ import { Club } from "@/lib/models";
 import { serialize, type ClubJSON } from "@/lib/types";
 import { computeClubRanking } from "@/lib/ranking";
 import { ClubOgImage, OG_SIZE, loadOgFonts } from "@/lib/og";
+import { truncateSurname } from "@/lib/privacy";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -37,7 +38,7 @@ export default async function Image({
         city={club.city ?? null}
         ranking={ranking.slice(0, 3).map((r) => ({
           position: r.position,
-          playerName: r.playerName,
+          playerName: truncateSurname(r.playerName),
           total: r.total,
         }))}
       />

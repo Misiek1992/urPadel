@@ -6,9 +6,14 @@ import { apiError, HttpError, requireManagerOf } from "@/lib/auth";
 import { logAction } from "@/lib/audit";
 import { serialize, type TournamentJSON } from "@/lib/types";
 import { computeStandings } from "@/lib/engine";
+import { sanitizeEntrantsForPublic } from "@/lib/privacy";
 
 export const dynamic = "force-dynamic";
 
+// Public, unauthenticated route (only consumer today: CourtLive's live-court
+// polling) — entrant names are truncated the same as every other public
+// page. If a manager-only consumer ever needs full names from this route,
+// give it its own gated variant rather than removing this.
 export async function GET(
   _req: NextRequest,
   { params }: { params: Promise<{ tournamentId: string }> }
@@ -23,6 +28,7 @@ export async function GET(
     if (!doc) throw new HttpError(404, "Tournament not found.");
 
     const tournament = serialize<TournamentJSON>(doc);
+    tournament.entrants = sanitizeEntrantsForPublic(tournament.entrants);
     const standings = computeStandings(tournament.entrants, tournament.rounds);
 
     return NextResponse.json({ tournament, standings });

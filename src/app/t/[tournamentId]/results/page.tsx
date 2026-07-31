@@ -11,6 +11,7 @@ import { formatLabel } from "@/lib/i18n/formats";
 import { createT } from "@/lib/i18n";
 import { getLocale } from "@/lib/i18n/server";
 import { getTournamentWithClub } from "@/lib/loaders";
+import { sanitizeEntrantsForPublic } from "@/lib/privacy";
 import { Badge, PageHeader } from "@/components/ui";
 import { cn } from "@/lib/cn";
 import { medalFor } from "@/components/public/StandingsTable";
@@ -30,7 +31,8 @@ export async function generateMetadata({
   const { tournament, club } = data;
   const t = createT(await getLocale());
   const isActive = tournament.status === "active";
-  const winner = isActive ? null : computeStandings(tournament.entrants, tournament.rounds)[0];
+  const publicEntrants = sanitizeEntrantsForPublic(tournament.entrants);
+  const winner = isActive ? null : computeStandings(publicEntrants, tournament.rounds)[0];
   const title = `${tournament.name} — ${t("resultsPage.titleSuffix")}`;
   const description = [
     club?.name,
@@ -58,8 +60,9 @@ export default async function ResultsPage({
   const { tournament, club } = data;
   const t = createT(await getLocale());
 
-  const map = entrantMap(tournament.entrants);
-  const standings = computeStandings(tournament.entrants, tournament.rounds);
+  const publicEntrants = sanitizeEntrantsForPublic(tournament.entrants);
+  const map = entrantMap(publicEntrants);
+  const standings = computeStandings(publicEntrants, tournament.rounds);
   const isActive = tournament.status === "active";
   const roundPoints = tournament.rounds.map((r) =>
     roundPointsByEntrant(r as EngineRound)
@@ -115,6 +118,11 @@ export default async function ResultsPage({
                   date: formatDate(tournament.finishedAt ?? tournament.playedAt),
                 })}
               </Badge>
+            )}
+            {tournament.createdByEmail && (
+              <span className="text-xs text-slate-500">
+                {t("tournamentPage.startedBy", { email: tournament.createdByEmail })}
+              </span>
             )}
           </span>
         }

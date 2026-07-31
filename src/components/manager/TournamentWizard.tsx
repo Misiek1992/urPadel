@@ -6,7 +6,7 @@
 // review & start.
 
 import { useRouter } from "next/navigation";
-import { useMemo, useRef, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import {
   Badge,
   Button,
@@ -136,6 +136,30 @@ export function TournamentWizard({
     if (additions.length === 0) return;
     setPlayers((prev) => [...prev, ...additions]);
   }
+
+  // Prefill from a Playtomic import (PlaytomicImportModal stashes this right
+  // before navigating here — the only cross-page hand-off in the app, same
+  // mechanism ScoreForm.tsx uses for the score-entry PIN).
+  useEffect(() => {
+    const key = `urpadel:playtomic-import:${clubId}`;
+    const raw = sessionStorage.getItem(key);
+    if (!raw) return;
+    sessionStorage.removeItem(key);
+    try {
+      const data = JSON.parse(raw) as { name?: string; players?: string[] };
+      if (data.name) {
+        setName(data.name);
+        setNameTouched(true);
+      }
+      if (Array.isArray(data.players) && data.players.length > 0) {
+        addPlayers(data.players);
+      }
+    } catch {
+      // Malformed stashed value — nothing to prefill.
+    }
+    // Runs once on mount for this club's wizard instance.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [clubId]);
 
   function removePlayer(name: string) {
     setPlayers((prev) => prev.filter((p) => p !== name));

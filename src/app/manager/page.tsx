@@ -1,7 +1,7 @@
 import Link from "next/link";
 import { getViewer } from "@/lib/auth";
 import { dbConnect } from "@/lib/db";
-import { ClubPlayer, RankingEntry, Tournament } from "@/lib/models";
+import { Club, ClubPlayer, RankingEntry, Tournament } from "@/lib/models";
 import { serialize, type TournamentJSON } from "@/lib/types";
 import { computeStandings } from "@/lib/engine";
 import { formatLabel } from "@/lib/i18n/formats";
@@ -11,6 +11,7 @@ import { RANKING_WINDOW_DAYS } from "@/lib/ranking";
 import { Badge, EmptyState, PageHeader, StatCard } from "@/components/ui";
 import { ManagerDenied, resolveActiveClub } from "@/components/manager/access";
 import { ManagerNav } from "@/components/manager/ManagerNav";
+import { PlaytomicImportButton } from "@/components/manager/PlaytomicImportModal";
 import { formatDate } from "@/components/public/helpers";
 
 export const dynamic = "force-dynamic";
@@ -29,15 +30,19 @@ export default async function ManagerDashboard({
 
   await dbConnect();
   const since = new Date(Date.now() - RANKING_WINDOW_DAYS * 24 * 60 * 60 * 1000);
-  const [playerCount, tournamentCount, activeCount, rankingCount, tournamentsRaw] =
+  const [playerCount, tournamentCount, activeCount, rankingCount, tournamentsRaw, clubDoc] =
     await Promise.all([
       ClubPlayer.countDocuments({ clubId }),
       Tournament.countDocuments({ clubId }),
       Tournament.countDocuments({ clubId, status: "active" }),
       RankingEntry.countDocuments({ clubId, date: { $gte: since } }),
       Tournament.find({ clubId }).sort({ playedAt: -1 }).limit(12).lean(),
+      Club.findById(clubId, "playtomicClientId").lean(),
     ]);
   const tournaments = serialize<TournamentJSON[]>(tournamentsRaw);
+  const playtomicConnected = Boolean(
+    (clubDoc as unknown as { playtomicClientId?: string | null } | null)?.playtomicClientId
+  );
   const active = tournaments.filter((tour) => tour.status === "active");
   const recentFinished = tournaments
     .filter((tour) => tour.status === "finished")
@@ -59,12 +64,15 @@ export default async function ManagerDashboard({
           </>
         }
         actions={
-          <Link
-            href={`/manager/tournaments/new?club=${clubId}`}
-            className="btn btn-primary"
-          >
-            {t("managerDashboard.newTournament")}
-          </Link>
+          <>
+            <Link
+              href={`/manager/tournaments/new?club=${clubId}`}
+              className="btn btn-primary"
+            >
+              {t("managerDashboard.newTournament")}
+            </Link>
+            <PlaytomicImportButton clubId={clubId} connected={playtomicConnected} />
+          </>
         }
       />
       <div className="-mt-2 mb-8">

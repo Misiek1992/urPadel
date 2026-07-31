@@ -74,6 +74,11 @@ export default async function ClubPage({
             {club.description}
           </>
         }
+        actions={
+          club.playtomicClientId ? (
+            <Badge tone="volt">{t("clubPage.playtomicConnected")}</Badge>
+          ) : undefined
+        }
       />
 
       {active.length > 0 && (

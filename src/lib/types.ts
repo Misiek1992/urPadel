@@ -61,6 +61,10 @@ export interface ClubJSON {
   city?: string;
   description?: string;
   managerEmails: string[];
+  // playtomicSecretEncrypted is deliberately absent — never sent to a client.
+  playtomicClientId?: string | null;
+  playtomicTenantId?: string | null;
+  playtomicConnectedAt?: string | null;
   createdAt: string;
   updatedAt: string;
 }
@@ -129,5 +133,16 @@ export function serialize<T = unknown>(value: unknown): T {
 export function sanitizeTournament<T extends object>(tournament: T): T {
   const obj = tournament as T & { scorePin?: unknown };
   delete obj.scorePin;
+  return obj;
+}
+
+/**
+ * Strips `playtomicSecretEncrypted` before a club reaches any client. Same
+ * reasoning as `sanitizeTournament` above — `select: false` already excludes
+ * it from ordinary reads, this matters right after a write.
+ */
+export function sanitizeClub<T extends object>(club: T): T {
+  const obj = club as T & { playtomicSecretEncrypted?: unknown };
+  delete obj.playtomicSecretEncrypted;
   return obj;
 }

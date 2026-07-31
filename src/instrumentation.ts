@@ -19,6 +19,7 @@ export async function register() {
     "NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY",
     "CLERK_SECRET_KEY",
     "SUPERADMIN_EMAIL",
+    "CREDENTIALS_ENCRYPTION_KEY",
   ];
   const missing = required.filter((key) => !process.env[key]);
   if (missing.length > 0) {

@@ -23,6 +23,7 @@ export function ManagerNav({
     { href: "/manager/players", label: t("managerNav.players") },
     { href: "/manager/ranking", label: t("managerNav.ranking") },
     { href: "/manager/tournaments/new", label: t("managerNav.newTournament") },
+    { href: "/manager/settings", label: t("managerNav.settings") },
   ] as const;
 
   return (

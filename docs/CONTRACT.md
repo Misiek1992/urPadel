@@ -103,6 +103,14 @@ Key semantics:
   Never in `TournamentJSON`; after `Tournament.create()`/`.save()` the
   in-memory doc still carries it, so any response built from a just-written
   doc must go through `sanitizeTournament()` (src/lib/types.ts) first.
+- `Club.playtomicClientId` / `playtomicTenantId` / `playtomicConnectedAt`:
+  Playtomic Third-Party API identifiers, not secrets — read normally,
+  present in `ClubJSON`. `Club.playtomicSecretEncrypted`: AES-256-GCM
+  ciphertext (`src/lib/crypto.ts`, key from `CREDENTIALS_ENCRYPTION_KEY`),
+  same `select: false` + `sanitizeClub()` treatment as `scorePin` above —
+  only `playtomic/route.ts` (save) and `playtomic/tournaments/route.ts`
+  (list) opt in with `.select("+playtomicSecretEncrypted")`, and it's never
+  in `ClubJSON`.
 
 ## Core library reference (already implemented — import, don't reimplement)
 
@@ -144,6 +152,10 @@ All routes under `src/app/api/`. Auth column: `public` (none), `manager`
 | `DELETE /api/clubs/[clubId]` | superadmin | → `{ok:true}` (also deletes its players/tournaments/ranking entries) |
 | `POST /api/clubs/[clubId]/managers` | superadmin | `{email}` → `{club}` (lowercase, dedupe, validate email) |
 | `DELETE /api/clubs/[clubId]/managers?email=` | superadmin | → `{club}` |
+| `PATCH /api/clubs/[clubId]/playtomic` | manager | `{clientId, secret?, tenantId}` → `{club}` — `secret` optional on update (reuses the stored one, decrypted, if omitted); verifies via a live Playtomic OAuth token exchange before saving anything (400 on failure, nothing persisted); response via `sanitizeClub` |
+| `DELETE /api/clubs/[clubId]/playtomic` | manager | → `{club}` (clears all four `playtomic*` fields) |
+| `GET /api/clubs/[clubId]/playtomic/tournaments?daysBack=&daysForward=` | manager | → `{tournaments: {activityId, name, date, players: {name, email?}[]}[]}` — Playtomic Bookings grouped by `activity_id`; 400 if not connected, 502 on Playtomic-side failure |
+| `POST /api/clubs/[clubId]/playtomic/import` | manager | `{tournaments: {name, players: {name, email?}[]}[]}` (≤20 tournaments, ≤500 players total — the manager's checked subset, echoed back from the GET above) → `{tournaments: {name, playerNames}[], newPlayers}` — upserts `ClubPlayer` roster entries (backfills `email` on existing players missing one) |
 | `GET /api/clubs/[clubId]/players` | public | → `{players: ClubPlayerJSON[]}` sorted by name |
 | `POST /api/clubs/[clubId]/players` | manager | `{name, email?}` OR `{names: string[]}` (bulk import) → `{players}` (skip existing by nameLower) |
 | `PATCH /api/clubs/[clubId]/players/[playerId]` | manager | `{name?, email?}` → `{player}` (keep nameLower in sync) |
@@ -205,7 +217,8 @@ wrapped loaders in `src/lib/loaders.ts` — reuse those instead of querying
 `Tournament`/`Club` directly in these three files.
 
 Manager (slice C): `/manager`, `/manager/players`, `/manager/ranking`,
-`/manager/tournaments/new`, `/manager/tournaments/[tournamentId]`.
+`/manager/tournaments/new`, `/manager/tournaments/[tournamentId]`,
+`/manager/settings` (Playtomic connection).
 Club selection via `?club=<clubId>` query param (default: first of
 `viewer.managedClubs`); every internal manager link must preserve it.
 Components in `src/components/manager/`.

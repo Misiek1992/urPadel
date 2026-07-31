@@ -7,6 +7,16 @@ const ClubSchema = new Schema(
     city: { type: String, trim: true },
     description: { type: String, trim: true },
     managerEmails: { type: [String], default: [] },
+    // Playtomic Third-Party API credentials, for importing tournament
+    // rosters. clientId/tenantId are identifiers, not secrets, and are read
+    // normally. `secret` is encrypted (src/lib/crypto.ts) and, like
+    // Tournament.scorePin below, `select: false` so it's excluded from every
+    // query by default — only the routes that actually need it opt in with
+    // `.select("+playtomicSecretEncrypted")`.
+    playtomicClientId: { type: String, default: null },
+    playtomicTenantId: { type: String, default: null },
+    playtomicSecretEncrypted: { type: String, default: null, select: false },
+    playtomicConnectedAt: { type: Date, default: null },
   },
   { timestamps: true }
 );

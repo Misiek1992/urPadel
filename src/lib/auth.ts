@@ -41,6 +41,24 @@ export const getSessionEmail = cache(async (): Promise<string | null> => {
   }
 });
 
+/**
+ * Display name of the signed-in Clerk user (first + last name, falling back
+ * to their username), or null if neither is set. Used only where a name is
+ * shown to the *public* (e.g. "Started by {name}" on a tournament page) —
+ * everywhere else in the app identifies people by email, matching the audit
+ * log, so prefer `getSessionEmail` unless you specifically need a
+ * human-readable name for a public-facing display.
+ */
+export const getSessionName = cache(async (): Promise<string | null> => {
+  try {
+    const user = await currentUser();
+    const name = [user?.firstName, user?.lastName].filter(Boolean).join(" ").trim();
+    return name || user?.username || null;
+  } catch {
+    return null;
+  }
+});
+
 export const isSuperAdminEmail = cache(
   async (email: string | null): Promise<boolean> => {
     if (!email) return false;

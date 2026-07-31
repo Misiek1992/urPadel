@@ -2,7 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { isValidObjectId } from "mongoose";
 import { dbConnect } from "@/lib/db";
 import { Club, Tournament } from "@/lib/models";
-import { apiError, HttpError, requireManagerOf } from "@/lib/auth";
+import { apiError, getSessionName, HttpError, requireManagerOf } from "@/lib/auth";
 import { logAction } from "@/lib/audit";
 import {
   sanitizeTournament,
@@ -55,6 +55,7 @@ export async function POST(
     const { clubId } = await params;
     if (!isValidObjectId(clubId)) throw new HttpError(404, "Club not found.");
     const actorEmail = await requireManagerOf(clubId);
+    const creatorName = await getSessionName();
     await dbConnect();
 
     const club = await Club.findById(clubId).lean();
@@ -161,7 +162,7 @@ export async function POST(
       status: "active",
       pointsAwarded: false,
       playedAt: new Date(),
-      createdByEmail: actorEmail,
+      createdByName: creatorName,
       scorePin,
     });
 

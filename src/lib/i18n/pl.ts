@@ -152,7 +152,7 @@ const pl: Dictionary = {
     courtsCount: "{count} kort",
     courtsCountPlural: "{count} kortów",
     entrantsCount: "{count} uczestników",
-    startedBy: "Rozpoczęte przez {email}",
+    startedBy: "Rozpoczęte przez {name}",
     enterScoreHint: "Wpisz wynik na swoim korcie zaraz po zakończeniu meczu.",
     courtScreen: "Ekran kortu →",
     vs: "vs",

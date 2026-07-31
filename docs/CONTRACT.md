@@ -97,11 +97,16 @@ Key semantics:
   `tournament.matchPoints`.
 - `Round.byes`: entrant ids resting that round.
 - `Tournament.status`: `"active" | "finished"`. `playedAt` = tournament date.
-- `Tournament.createdByEmail`: the manager who created it (set from
-  `requireManagerOf`'s returned email at creation, never changed after).
-  Public — shown on the tournament and results pages as "Started by
-  {email}" — unlike every other credential/secret field on this list, this
-  one is deliberately not stripped.
+- `Tournament.createdByName`: the manager who created it, as a **display
+  name** (Clerk `firstName`+`lastName`, falling back to `username`; see
+  `getSessionName()` in `src/lib/auth.ts`), set at creation and never
+  changed after. Public — shown on the tournament and results pages as
+  "Started by {name}". Deliberately a name, not `requireManagerOf`'s email —
+  every other actor-tracking field in this app (`AuditLog.actorEmail`, the
+  `logAction` calls throughout) uses email since those views are
+  manager/superadmin-only, but an email address rendered to a signed-out
+  visitor is scrapable, which undercuts the same privacy goal as the surname
+  truncation below. `null` if the Clerk user never set a name.
 - **Public-page name truncation** (`src/lib/privacy.ts`): every route a
   signed-out visitor can reach truncates player surnames to their first
   letter ("Anna Kowalska" → "Anna K.") via `sanitizeEntrantsForPublic` /
@@ -188,7 +193,7 @@ All routes under `src/app/api/`. Auth column: `public` (none), `manager`
 | `PATCH /api/ranking-entries/[entryId]` | manager of entry's club | `{points?, note?}` → `{entry}` |
 | `DELETE /api/ranking-entries/[entryId]` | manager of entry's club | → `{ok:true}` |
 | `GET /api/clubs/[clubId]/tournaments` | public | → `{tournaments: TournamentJSON[]}` newest `playedAt` first — each tournament's `entrants` truncated via `sanitizeEntrantsForPublic` |
-| `POST /api/clubs/[clubId]/tournaments` | manager | `{name, type, matchPoints, courts: string[], entrants: {name, players?}[], scorePin?}` → `{tournament}` — validate with `validateTournamentSetup` (team types: each entrant needs exactly 2 players; matchPoints int 4–128; courts ≤32 non-empty/trimmed/unique; entrants ≤128). Server assigns entrant ids via `makeEntrantId()`, generates round 1 with `generateNextRound`, status `active`, `playedAt` now, `createdByEmail` set to the caller. `scorePin` optional, 4-6 digits or omitted; response is run through `sanitizeTournament` so it's never echoed back |
+| `POST /api/clubs/[clubId]/tournaments` | manager | `{name, type, matchPoints, courts: string[], entrants: {name, players?}[], scorePin?}` → `{tournament}` — validate with `validateTournamentSetup` (team types: each entrant needs exactly 2 players; matchPoints int 4–128; courts ≤32 non-empty/trimmed/unique; entrants ≤128). Server assigns entrant ids via `makeEntrantId()`, generates round 1 with `generateNextRound`, status `active`, `playedAt` now, `createdByName` set from `getSessionName()`. `scorePin` optional, 4-6 digits or omitted; response is run through `sanitizeTournament` so it's never echoed back |
 | `GET /api/tournaments/[tournamentId]` | public | → `{tournament: TournamentJSON, standings: StandingRow[]}` — `entrants`/`standings` names truncated via `sanitizeEntrantsForPublic` (only consumer today: `CourtLive`'s polling) |
 | `DELETE /api/tournaments/[tournamentId]` | manager | → `{ok:true}` (any status; also delete its RankingEntry docs if pointsAwarded) |
 | `POST /api/tournaments/[tournamentId]/rounds` | manager | `{final?: boolean}` → `{tournament}` — 400 if status ≠ active; 400 "Enter all results for round N first" if current round has null scores; 400 if current round `isFinal` ("Final round played — close the tournament"); 409 if another request already advanced the round since this one read it (client should refresh) |

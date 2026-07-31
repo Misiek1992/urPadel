@@ -119,9 +119,9 @@ export default async function ResultsPage({
                 })}
               </Badge>
             )}
-            {tournament.createdByEmail && (
+            {tournament.createdByName && (
               <span className="text-xs text-slate-500">
-                {t("tournamentPage.startedBy", { email: tournament.createdByEmail })}
+                {t("tournamentPage.startedBy", { name: tournament.createdByName })}
               </span>
             )}
           </span>

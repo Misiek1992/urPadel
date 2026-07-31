@@ -105,8 +105,8 @@ export default async function TournamentPage({
                     count: tournament.courts.length,
                   })}{" "}
               · {t("tournamentPage.entrantsCount", { count: tournament.entrants.length })}
-              {tournament.createdByEmail && (
-                <> · {t("tournamentPage.startedBy", { email: tournament.createdByEmail })}</>
+              {tournament.createdByName && (
+                <> · {t("tournamentPage.startedBy", { name: tournament.createdByName })}</>
               )}
             </span>
           </span>

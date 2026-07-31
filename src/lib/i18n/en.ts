@@ -144,7 +144,7 @@ const en = {
     courtsCount: "{count} court",
     courtsCountPlural: "{count} courts",
     entrantsCount: "{count} entrants",
-    startedBy: "Started by {email}",
+    startedBy: "Started by {name}",
     enterScoreHint: "Enter the score at your court when the match ends.",
     courtScreen: "Court screen →",
     vs: "vs",

@@ -9,7 +9,10 @@
 const TOKEN_URL = "https://thirdparty.playtomic.io/api/v1/oauth/token";
 const BOOKINGS_URL = "https://thirdparty.playtomic.io/api/v1/bookings";
 const PAGE_SIZE = 100;
-const MAX_PAGES = 10; // runaway guard — a club's tournament count in a ~37-day window is small
+// Runaway guard. The bookings endpoint returns ALL booking types (not just
+// tournaments — the booking_type query param is not honoured), so a busy venue
+// can have many pages in a ~37-day window; 20×100 = 2000 bookings is plenty.
+const MAX_PAGES = 20;
 
 export class PlaytomicError extends Error {
   status?: number;
@@ -46,7 +49,9 @@ interface RawParticipant {
 interface RawBooking {
   activity_id?: string;
   activity_name?: string;
+  booking_type?: string;
   booking_start_date?: string;
+  status?: string;
   participant_info?: {
     participants?: RawParticipant[];
   };
@@ -108,16 +113,24 @@ async function fetchTournamentBookings(
         res.status
       );
     }
-    // The exact pagination envelope isn't fully confirmed from docs alone —
-    // handle both a bare array and a {data, has_more} wrapper defensively.
+    // Playtomic returns a bare JSON array (not a {data, has_more} envelope),
+    // sorted newest-first, PAGE_SIZE per page. Keep paging until a page comes
+    // back short — that's the last page. (The previous code looked for a
+    // has_more flag that never exists, so it stopped after page 0 and silently
+    // dropped every booking older than the newest 100 — which hid near-term
+    // tournaments at busy venues.)
     const body = (await res.json().catch(() => null)) as
       | RawBooking[]
-      | { data?: RawBooking[]; has_more?: boolean }
+      | { data?: RawBooking[] }
       | null;
     const pageItems = Array.isArray(body) ? body : (body?.data ?? []);
     bookings.push(...pageItems);
-    const hasMore = !Array.isArray(body) && Boolean(body?.has_more);
-    if (!hasMore || pageItems.length < PAGE_SIZE) break;
+    if (pageItems.length < PAGE_SIZE) break;
+    if (page === MAX_PAGES - 1) {
+      console.warn(
+        `[playtomic] Hit the ${MAX_PAGES}-page cap while listing bookings for tenant ${tenantId} — some may be omitted.`
+      );
+    }
   }
   return bookings;
 }
@@ -135,8 +148,14 @@ export function groupTournamentBookings(bookings: RawBooking[]): PlaytomicTourna
   >();
 
   for (const booking of bookings) {
-    // Only tournament bookings with multiple resources carry activity_id per
-    // Playtomic's docs; skip anything without one rather than crash.
+    // The bookings feed mixes every type and the booking_type query param is
+    // ignored server-side, so filter here. PUBLIC_CLASS events (Padel Intro,
+    // Pilates, …) also carry an activity_id, so activity_id presence alone is
+    // NOT enough to identify a tournament — require the type explicitly.
+    if (booking.booking_type !== "TOURNAMENT") continue;
+    // Skip canceled bookings — a fully-canceled activity then never forms a
+    // group. (Mixed activities keep their still-live bookings.)
+    if (booking.status === "CANCELED") continue;
     if (!booking.activity_id || !booking.booking_start_date) continue;
     let group = groups.get(booking.activity_id);
     if (!group) {

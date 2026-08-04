@@ -55,6 +55,16 @@ export interface TournamentJSON {
   updatedAt: string;
 }
 
+export type OcrEngine = "tesseract" | "cloud";
+
+/** Per-club feature toggles + their config. Extensible: one key per feature. */
+export interface ClubFeaturesJSON {
+  accountantAssistant?: {
+    enabled: boolean;
+    ocrEngine: OcrEngine;
+  };
+}
+
 export interface ClubJSON {
   _id: string;
   name: string;
@@ -66,6 +76,31 @@ export interface ClubJSON {
   playtomicClientId?: string | null;
   playtomicTenantId?: string | null;
   playtomicConnectedAt?: string | null;
+  features?: ClubFeaturesJSON;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export type AccountantDocumentStatus =
+  | "uploaded"
+  | "processing"
+  | "parsed"
+  | "failed"
+  | "unsupported";
+
+/** A stored accountant document. Never carries the raw `data` bytes. */
+export interface AccountantDocumentJSON {
+  _id: string;
+  clubId: string;
+  uploadedByEmail?: string | null;
+  fileName: string;
+  mimeType: string;
+  size: number;
+  ocrEngine: OcrEngine;
+  status: AccountantDocumentStatus;
+  extractedText: string;
+  documentType?: string | null;
+  error?: string | null;
   createdAt: string;
   updatedAt: string;
 }
@@ -117,7 +152,14 @@ export interface AuditLogJSON {
 export interface ViewerJSON {
   email: string | null;
   isSuperAdmin: boolean;
-  managedClubs: { _id: string; name: string; slug: string }[];
+  managedClubs: {
+    _id: string;
+    name: string;
+    slug: string;
+    // Just the enabled flags the manager nav needs to decide which
+    // feature tabs to show.
+    features: { accountantAssistant: boolean };
+  }[];
 }
 
 /** Deep-converts Mongoose docs / ObjectIds / Dates into plain JSON-safe values. */

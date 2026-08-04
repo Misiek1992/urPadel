@@ -17,6 +17,16 @@ const ClubSchema = new Schema(
     playtomicTenantId: { type: String, default: null },
     playtomicSecretEncrypted: { type: String, default: null, select: false },
     playtomicConnectedAt: { type: Date, default: null },
+    // Optional per-club features, toggled by the superadmin. Off for every
+    // club by default. Extensible: each feature is its own sub-object with its
+    // own config (the first is the Accountant Assistant, which also carries
+    // which OCR engine that club should use).
+    features: {
+      accountantAssistant: {
+        enabled: { type: Boolean, default: false },
+        ocrEngine: { type: String, enum: ["tesseract", "cloud"], default: "tesseract" },
+      },
+    },
   },
   { timestamps: true }
 );
@@ -139,6 +149,35 @@ AuditLogSchema.index({ createdAt: -1 });
 // The manager-scoped activity log filters by clubId before sorting.
 AuditLogSchema.index({ clubId: 1, createdAt: -1 });
 
+// Documents uploaded to a club's Accountant Assistant (invoices, receipts…).
+// The raw bytes live in `data` with `select: false` — like the encrypted
+// Playtomic secret, they're never shipped in a list query; only the dedicated
+// file-download route opts in with `.select("+data")`. Financial PII: every
+// route touching these is manager-of-club AND feature-enabled gated.
+const AccountantDocumentSchema = new Schema(
+  {
+    clubId: { type: Schema.Types.ObjectId, ref: "Club", required: true, index: true },
+    uploadedByEmail: { type: String, default: null },
+    fileName: { type: String, required: true },
+    mimeType: { type: String, required: true },
+    size: { type: Number, required: true },
+    data: { type: Buffer, required: true, select: false },
+    ocrEngine: { type: String, enum: ["tesseract", "cloud"], required: true },
+    status: {
+      type: String,
+      enum: ["uploaded", "processing", "parsed", "failed", "unsupported"],
+      default: "uploaded",
+    },
+    extractedText: { type: String, default: "" },
+    // Set later by per-document-type parsing (invoice/receipt/…); null until then.
+    documentType: { type: String, default: null },
+    parsed: { type: Schema.Types.Mixed, default: null },
+    error: { type: String, default: null },
+  },
+  { timestamps: true }
+);
+AccountantDocumentSchema.index({ clubId: 1, createdAt: -1 });
+
 export const Club = mongoose.models.Club || mongoose.model("Club", ClubSchema);
 export const ClubPlayer =
   mongoose.models.ClubPlayer || mongoose.model("ClubPlayer", ClubPlayerSchema);
@@ -148,3 +187,6 @@ export const Tournament =
   mongoose.models.Tournament || mongoose.model("Tournament", TournamentSchema);
 export const AppUser = mongoose.models.AppUser || mongoose.model("AppUser", AppUserSchema);
 export const AuditLog = mongoose.models.AuditLog || mongoose.model("AuditLog", AuditLogSchema);
+export const AccountantDocument =
+  mongoose.models.AccountantDocument ||
+  mongoose.model("AccountantDocument", AccountantDocumentSchema);

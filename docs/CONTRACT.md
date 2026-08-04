@@ -139,6 +139,22 @@ Key semantics:
   only `playtomic/route.ts` (save) and `playtomic/tournaments/route.ts`
   (list) opt in with `.select("+playtomicSecretEncrypted")`, and it's never
   in `ClubJSON`.
+- `Club.features`: per-club feature flags, superadmin-toggled, **off by
+  default**. Extensible (one sub-object per feature); first is
+  `accountantAssistant: { enabled, ocrEngine: "tesseract"|"cloud" }`. Present
+  in `ClubJSON`; the enabled flags also ride on `ViewerJSON.managedClubs[].features`
+  so `ManagerNav` can show/hide the feature tab. New per-club-feature UI must
+  be gated **both** by the tab visibility AND by an in-page/route enabled check
+  (defense in depth — see `requireAccountantFeature` in `src/lib/accountant.ts`).
+- `AccountantDocument` model (Accountant Assistant uploads): `clubId`,
+  `fileName`, `mimeType`, `size`, `data: Buffer` **`select: false`** (raw
+  bytes — same discipline as the encrypted secret; only the `.../file` route
+  opts in with `.select("+data")`), `ocrEngine`, `status`, `extractedText`,
+  `documentType`/`parsed` (null until per-type parsing lands). Financial PII —
+  every route is manager-of-club AND feature-enabled gated, never public.
+  `AccountantDocumentJSON` never carries `data` (mapped via `toAccountantJSON`).
+  OCR engines live in `src/lib/ocr/` (`runOcr` dispatches to `tesseract` /
+  `cloud`); cloud needs `GOOGLE_VISION_API_KEY`.
 
 ## Core library reference (already implemented — import, don't reimplement)
 
@@ -192,6 +208,11 @@ All routes under `src/app/api/`. Auth column: `public` (none), `manager`
 | `DELETE /api/clubs/[clubId]/playtomic` | manager | → `{club}` (clears all four `playtomic*` fields) |
 | `GET /api/clubs/[clubId]/playtomic/tournaments?daysBack=&daysForward=` | manager | → `{tournaments: {activityId, name, date, players: {name, email?}[]}[]}` — pages through ALL Playtomic Bookings in the window (the feed is a bare newest-first array with no `has_more`; a `booking_type=TOURNAMENT` query param exists but is ignored server-side), then in code keeps only `booking_type==="TOURNAMENT"`, non-`CANCELED` bookings and groups them by `activity_id` (PUBLIC_CLASS etc. also carry an `activity_id`, so type must be checked in code). 400 if not connected, 502 on Playtomic-side failure |
 | `POST /api/clubs/[clubId]/playtomic/import` | manager | `{tournaments: {name, players: {name, email?}[]}[]}` (≤20 tournaments, ≤500 players total — the manager's checked subset, echoed back from the GET above) → `{tournaments: {name, playerNames}[], newPlayers}` — upserts `ClubPlayer` roster entries (backfills `email` on existing players missing one) |
+| `PATCH /api/clubs/[clubId]/features` | superadmin | `{feature, enabled, ocrEngine?}` → `{club}` — toggles a per-club feature (allowlisted; first is `accountantAssistant`) and its config; `logAction("club.feature.toggle")`; response via `sanitizeClub` |
+| `GET /api/clubs/[clubId]/accountant/documents` | manager **+ feature enabled** | → `{documents: AccountantDocumentJSON[]}` newest first — never includes raw `data` bytes |
+| `POST /api/clubs/[clubId]/accountant/documents` | manager **+ feature enabled** | `{fileName, mimeType, dataBase64}` (image or PDF, ≤10 MB) → `{document}` — stores the bytes, runs OCR with the club's configured engine (images now; PDF stored with `status:"unsupported"`), records `extractedText`/`status`. Response omits `data` |
+| `DELETE /api/clubs/[clubId]/accountant/documents/[documentId]` | manager **+ feature enabled** | → `{ok:true}` (scoped to the club) |
+| `GET /api/clubs/[clubId]/accountant/documents/[documentId]/file` | manager **+ feature enabled** | → the raw file bytes (`Content-Type` = stored mime; the only route that `.select("+data")`). Financial PII — never public |
 | `GET /api/clubs/[clubId]/players` | public | → `{players}` sorted by name — sanitized via `sanitizePlayersForPublic` (no `email`/`nameLower`, surname truncated) |
 | `POST /api/clubs/[clubId]/players` | manager | `{name, email?}` OR `{names: string[]}` (bulk import) → `{players}` (skip existing by nameLower) |
 | `PATCH /api/clubs/[clubId]/players/[playerId]` | manager | `{name?, email?}` → `{player}` (keep nameLower in sync) |

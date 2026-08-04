@@ -11,6 +11,7 @@ import {
   ErrorText,
   Input,
   Modal,
+  Select,
   Spinner,
   Textarea,
   cn,
@@ -174,9 +175,35 @@ function ClubCard({
   const [confirmName, setConfirmName] = useState("");
   const [deleting, setDeleting] = useState(false);
   const [deleteError, setDeleteError] = useState<string | null>(null);
+  const [togglingFeature, setTogglingFeature] = useState(false);
+  const [featureError, setFeatureError] = useState<string | null>(null);
+
+  const accountantEnabled = Boolean(club.features?.accountantAssistant?.enabled);
+  const accountantEngine = club.features?.accountantAssistant?.ocrEngine ?? "tesseract";
 
   const confirmMatches =
     confirmName.trim().toLowerCase() === club.name.trim().toLowerCase();
+
+  async function setAccountantFeature(enabled: boolean, ocrEngine?: string) {
+    setTogglingFeature(true);
+    setFeatureError(null);
+    try {
+      const res = await fetch(`/api/clubs/${club._id}/features`, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ feature: "accountantAssistant", enabled, ocrEngine }),
+      });
+      if (!res.ok) {
+        setFeatureError(await readApiError(res));
+        return;
+      }
+      router.refresh();
+    } catch {
+      setFeatureError(NETWORK_ERROR);
+    } finally {
+      setTogglingFeature(false);
+    }
+  }
 
   function closeDeleteModal() {
     if (deleting) return;
@@ -407,6 +434,41 @@ function ClubCard({
           </Button>
         </form>
         <ErrorText>{managerError}</ErrorText>
+      </div>
+
+      <div className="border-t border-white/5 pt-4">
+        <p className="label">{t("superadminClubs.featuresLabel")}</p>
+        <label className="mt-1 flex cursor-pointer items-center gap-2.5 text-sm">
+          <input
+            type="checkbox"
+            checked={accountantEnabled}
+            disabled={togglingFeature}
+            onChange={(e) => setAccountantFeature(e.target.checked, accountantEngine)}
+            className="h-4 w-4 accent-[#d9f954]"
+          />
+          <span className="font-medium text-white">
+            {t("superadminClubs.featureAccountant")}
+          </span>
+          {togglingFeature && <Spinner className="h-3 w-3" />}
+        </label>
+        {accountantEnabled && (
+          <div className="mt-2.5 flex flex-wrap items-center gap-2 pl-6">
+            <span className="text-xs text-slate-400">
+              {t("superadminClubs.featureOcrEngine")}
+            </span>
+            <Select
+              value={accountantEngine}
+              disabled={togglingFeature}
+              onChange={(e) => setAccountantFeature(true, e.target.value)}
+              aria-label={t("superadminClubs.featureOcrEngine")}
+              className="w-auto py-1.5 text-xs"
+            >
+              <option value="tesseract">{t("superadminClubs.ocrTesseract")}</option>
+              <option value="cloud">{t("superadminClubs.ocrCloud")}</option>
+            </Select>
+          </div>
+        )}
+        <ErrorText>{featureError}</ErrorText>
       </div>
 
       <div className="mt-auto flex flex-wrap items-center gap-2 border-t border-white/5 pt-4">

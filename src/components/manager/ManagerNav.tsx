@@ -6,25 +6,32 @@ import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
 import { Select, cn } from "@/components/ui";
 import { useT } from "@/components/i18n/LocaleProvider";
+import type { ViewerJSON } from "@/lib/types";
 
 export function ManagerNav({
   clubs,
   activeClubId,
 }: {
-  clubs: { _id: string; name: string }[];
+  clubs: ViewerJSON["managedClubs"];
   activeClubId: string;
 }) {
   const pathname = usePathname();
   const router = useRouter();
   const t = useT();
 
+  const activeClub = clubs.find((c) => c._id === activeClubId);
+
   const TABS = [
     { href: "/manager", label: t("managerNav.dashboard") },
     { href: "/manager/players", label: t("managerNav.players") },
     { href: "/manager/ranking", label: t("managerNav.ranking") },
     { href: "/manager/tournaments/new", label: t("managerNav.newTournament") },
+    // Feature tabs — shown only when the superadmin enabled the feature.
+    ...(activeClub?.features.accountantAssistant
+      ? [{ href: "/manager/accountant", label: t("managerNav.accountant") }]
+      : []),
     { href: "/manager/settings", label: t("managerNav.settings") },
-  ] as const;
+  ];
 
   return (
     <div className="mt-4 flex flex-wrap items-center gap-3">

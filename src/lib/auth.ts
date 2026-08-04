@@ -80,8 +80,8 @@ export const getViewer = cache(async (): Promise<ViewerJSON> => {
   try {
     await dbConnect();
     const clubs = isSuperAdmin
-      ? await Club.find({}, "name slug").sort({ name: 1 }).lean()
-      : await Club.find({ managerEmails: email }, "name slug").sort({ name: 1 }).lean();
+      ? await Club.find({}, "name slug features").sort({ name: 1 }).lean()
+      : await Club.find({ managerEmails: email }, "name slug features").sort({ name: 1 }).lean();
     return {
       email,
       isSuperAdmin,
@@ -89,6 +89,9 @@ export const getViewer = cache(async (): Promise<ViewerJSON> => {
         _id: String(c._id),
         name: c.name,
         slug: c.slug,
+        features: {
+          accountantAssistant: Boolean(c.features?.accountantAssistant?.enabled),
+        },
       })),
     };
   } catch {

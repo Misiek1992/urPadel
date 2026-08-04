@@ -43,7 +43,7 @@ export function ManagerDenied({
 export function resolveActiveClub(
   viewer: ViewerJSON,
   clubParam: string | undefined
-): { _id: string; name: string; slug: string } | null {
+): ViewerJSON["managedClubs"][number] | null {
   if (viewer.managedClubs.length === 0) return null;
   return (
     viewer.managedClubs.find((c) => c._id === clubParam) ??

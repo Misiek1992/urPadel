@@ -6,8 +6,22 @@
 import { cache } from "react";
 import { dbConnect } from "./db";
 import { ClubPlayer, RankingEntry } from "./models";
-import { computeStandings, type Entrant, type EngineRound } from "./engine";
-import type { RankingEntryJSON, RankingRowJSON } from "./types";
+import {
+  computeStandings,
+  isCompetitiveType,
+  type Entrant,
+  type EngineRound,
+  type TournamentType,
+} from "./engine";
+import { finalPlacement, resolveTies } from "./competitive";
+import type {
+  CompetitiveConfigJSON,
+  GroupJSON,
+  RankingEntryJSON,
+  RankingRowJSON,
+  ScoringMode,
+  TieJSON,
+} from "./types";
 import { pointsForPosition, RANKING_WINDOW_DAYS } from "./ranking-points";
 
 export { pointsForPosition, RANKING_WINDOW_DAYS };
@@ -16,10 +30,37 @@ interface TournamentLike {
   _id: unknown;
   clubId: unknown;
   name: string;
+  type: TournamentType;
   entrants: Entrant[];
   rounds: EngineRound[];
+  scoring?: ScoringMode | null;
+  config?: CompetitiveConfigJSON | null;
+  groups?: GroupJSON[];
+  ties?: TieJSON[];
   pointsAwarded?: boolean;
   finishedAt?: Date | null;
+}
+
+/**
+ * Final ranking order (best → worst) as entrant ids. Competitive formats
+ * (knockout/groups/league) rank by bracket/table placement; Americano/Mexicano
+ * rank by cumulative rally points.
+ */
+function finalOrder(tournament: TournamentLike): string[] {
+  if (isCompetitiveType(tournament.type)) {
+    const plain = <T,>(v: unknown): T => JSON.parse(JSON.stringify(v ?? null)) as T;
+    const comp = {
+      type: tournament.type,
+      scoring: (tournament.scoring ?? "points") as ScoringMode,
+      config: plain<CompetitiveConfigJSON>(tournament.config) ?? {},
+      entrants: plain<Entrant[]>(tournament.entrants) ?? [],
+      groups: plain<GroupJSON[]>(tournament.groups) ?? [],
+      ties: plain<TieJSON[]>(tournament.ties) ?? [],
+    };
+    comp.ties = resolveTies(comp);
+    return finalPlacement(comp);
+  }
+  return computeStandings(tournament.entrants, tournament.rounds).map((r) => r.entrantId);
 }
 
 /**
@@ -33,7 +74,7 @@ export async function awardTournamentPoints(
   opts?: { date?: Date }
 ): Promise<number> {
   await dbConnect();
-  const standings = computeStandings(tournament.entrants, tournament.rounds);
+  const orderedIds = finalOrder(tournament);
   const date = opts?.date ?? tournament.finishedAt ?? new Date();
 
   // One entry per player instance (both members of a team get the team's
@@ -41,11 +82,10 @@ export async function awardTournamentPoints(
   // PER PLAYER — 32 serial round-trips for a 16-player tournament, all at
   // close time. Now: one bulk player-upsert, one lookup, one insertMany.
   const awards: { name: string; nameLower: string; position: number; points: number }[] = [];
-  for (let i = 0; i < standings.length; i++) {
-    const row = standings[i];
+  for (let i = 0; i < orderedIds.length; i++) {
     const position = i + 1;
     const points = pointsForPosition(position);
-    const entrant = tournament.entrants.find((e) => e.id === row.entrantId);
+    const entrant = tournament.entrants.find((e) => e.id === orderedIds[i]);
     const names =
       entrant?.players && entrant.players.length > 0
         ? entrant.players

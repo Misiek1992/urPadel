@@ -10,6 +10,9 @@ const DICT_KEY: Record<TournamentType, string> = {
   mexicano: "mexicano",
   "americano-team": "americanoTeam",
   "mexicano-team": "mexicanoTeam",
+  "knockout-team": "knockoutTeam",
+  "groups-team": "groupsTeam",
+  "league-team": "leagueTeam",
 };
 
 export function formatLabel(t: Translator, type: TournamentType): string {
@@ -25,6 +28,9 @@ const ALL_TYPES: TournamentType[] = [
   "mexicano",
   "americano-team",
   "mexicano-team",
+  "knockout-team",
+  "groups-team",
+  "league-team",
 ];
 
 export function formatOptions(

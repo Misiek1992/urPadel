@@ -10,10 +10,12 @@ import { useEffect, useState } from "react";
 import Link from "next/link";
 import { Badge } from "@/components/ui";
 import { useT } from "@/components/i18n/LocaleProvider";
-import { computeStandings } from "@/lib/engine";
+import { computeStandings, isCompetitiveType, type Entrant } from "@/lib/engine";
+import { isPlayable, leagueTable } from "@/lib/competitive";
 import type { TournamentJSON } from "@/lib/types";
 import { ScoreForm } from "./ScoreForm";
 import { StandingsTable } from "./StandingsTable";
+import { TieScoreForm } from "@/components/competitive/TieScoreForm";
 import { currentRound, entrantMap, sideNames } from "./helpers";
 
 const POLL_MS = 5000;
@@ -51,12 +53,25 @@ export function CourtLive({
     };
   }, [tournament.status, tournamentId]);
 
+  const competitive = isCompetitiveType(tournament.type);
+  const scoring = tournament.scoring ?? "points";
+  const bestOfSets = tournament.config?.bestOfSets ?? 3;
   const map = entrantMap(tournament.entrants);
-  const standings = computeStandings(tournament.entrants, tournament.rounds);
-  const round = currentRound(tournament);
+  const standings = competitive
+    ? tournament.type === "league-team"
+      ? leagueTable(tournament.entrants as Entrant[], tournament.ties ?? [], scoring)
+      : []
+    : computeStandings(tournament.entrants, tournament.rounds);
+  const round = competitive ? null : currentRound(tournament);
   const isActive = tournament.status === "active";
   const match = round?.matches.find((m) => m.court === court) ?? null;
   const done = match ? match.scoreA != null && match.scoreB != null : false;
+  // Competitive: the playable tie currently assigned to this court.
+  const courtTie = competitive
+    ? (tournament.ties ?? []).find(
+        (x) => x.court === court && isPlayable(x, scoring)
+      ) ?? null
+    : null;
 
   return (
     <>
@@ -70,7 +85,7 @@ export function CourtLive({
         <h1 className="mt-2 text-4xl font-extrabold uppercase tracking-wide text-volt-300 sm:text-5xl">
           {court}
         </h1>
-        {isActive && round && (
+        {isActive && !competitive && round && (
           <p className="mt-2 text-lg text-slate-400">
             {t("courtPage.round", { number: round.number })}
             {round.isFinal && (
@@ -79,6 +94,9 @@ export function CourtLive({
               </Badge>
             )}
           </p>
+        )}
+        {isActive && competitive && courtTie?.label && (
+          <p className="mt-2 text-lg text-slate-400">{courtTie.label}</p>
         )}
       </div>
 
@@ -92,6 +110,44 @@ export function CourtLive({
             {t("courtPage.seeResults")}
           </Link>
         </div>
+      ) : competitive ? (
+        courtTie ? (
+          <div className="card card-pad py-8">
+            <div className="grid grid-cols-[1fr_auto_1fr] items-center gap-4">
+              <div className="text-right">
+                {sideNames([courtTie.sideA.entrantId!], map).map((n) => (
+                  <p key={n} className="text-2xl font-extrabold text-white sm:text-3xl">
+                    {n}
+                  </p>
+                ))}
+              </div>
+              <span className="text-xl font-bold text-slate-500">{t("courtPage.vs")}</span>
+              <div className="text-left">
+                {sideNames([courtTie.sideB.entrantId!], map).map((n) => (
+                  <p key={n} className="text-2xl font-extrabold text-white sm:text-3xl">
+                    {n}
+                  </p>
+                ))}
+              </div>
+            </div>
+            <div className="mt-8 border-t border-white/10 pt-8">
+              <TieScoreForm
+                tournamentId={tournament._id}
+                tieId={courtTie.id}
+                scoring={scoring}
+                bestOfSets={bestOfSets}
+                size="xl"
+              />
+            </div>
+          </div>
+        ) : (
+          <div className="card card-pad py-12">
+            <p className="text-xl font-semibold text-white">{t("competitive.noneReady")}</p>
+            <Link href={`/t/${tournament._id}`} className="btn btn-secondary btn-md mt-6">
+              {t("resultsPage.liveView")}
+            </Link>
+          </div>
+        )
       ) : !match ? (
         <div className="card card-pad py-12">
           <p className="text-xl font-semibold text-white">
@@ -142,10 +198,12 @@ export function CourtLive({
         </div>
       )}
 
-      <div className="text-left">
-        <h2 className="section-title mb-3 text-center">{t("courtPage.top5")}</h2>
-        <StandingsTable standings={standings} t={t} limit={5} showRecord={false} />
-      </div>
+      {standings.length > 0 && (
+        <div className="text-left">
+          <h2 className="section-title mb-3 text-center">{t("courtPage.top5")}</h2>
+          <StandingsTable standings={standings} t={t} limit={5} showRecord={false} />
+        </div>
+      )}
     </>
   );
 }

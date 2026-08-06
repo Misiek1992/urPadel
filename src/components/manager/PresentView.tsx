@@ -9,13 +9,15 @@ import { useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
 import { Badge, Button, ErrorText, Modal, Spinner, cn } from "@/components/ui";
 import type { EntrantJSON, TournamentJSON } from "@/lib/types";
-import { computeStandings } from "@/lib/engine";
+import { computeStandings, isCompetitiveType } from "@/lib/engine";
+import { finalPlacement, hydrateCompetitive, isComplete } from "@/lib/competitive";
 import { pointsForPosition } from "@/lib/ranking-points";
 import { formatLabel } from "@/lib/i18n/formats";
 import { PadelMark } from "@/components/Logo";
 import { AutoRefresh } from "@/components/public/AutoRefresh";
 import { ScoreForm } from "@/components/public/ScoreForm";
 import { StandingsTable, medalFor } from "@/components/public/StandingsTable";
+import { CompetitiveView } from "@/components/competitive/CompetitiveView";
 import { useLocale, useT } from "@/components/i18n/LocaleProvider";
 
 async function readApiError(res: Response, fallback: string): Promise<string> {
@@ -56,15 +58,30 @@ export function PresentView({
   const t = useT();
   const locale = useLocale();
 
-  const map: Record<string, EntrantJSON> = {};
-  for (const e of tournament.entrants) map[e.id] = e;
+  const competitive = isCompetitiveType(tournament.type);
+  const tour = competitive ? hydrateCompetitive(tournament) : tournament;
 
-  const isActive = tournament.status === "active";
-  const round = tournament.rounds[tournament.rounds.length - 1] ?? null;
+  const map: Record<string, EntrantJSON> = {};
+  for (const e of tour.entrants) map[e.id] = e;
+
+  const isActive = tour.status === "active";
+  const round = tour.rounds[tour.rounds.length - 1] ?? null;
   const allScored =
     round?.matches.every((m) => m.scoreA != null && m.scoreB != null) ?? false;
-  const standings = computeStandings(tournament.entrants, tournament.rounds);
+  const standings = competitive ? [] : computeStandings(tour.entrants, tour.rounds);
   const podium = standings.slice(0, 3);
+  const compArgs = {
+    type: tour.type,
+    scoring: tour.scoring ?? ("points" as const),
+    config: tour.config ?? {},
+    entrants: tour.entrants,
+    groups: tour.groups ?? [],
+    ties: tour.ties ?? [],
+  };
+  const competitivePlacement = competitive
+    ? finalPlacement(compArgs).map((id) => map[id]).filter(Boolean)
+    : [];
+  const competitiveComplete = competitive ? isComplete(compArgs) : false;
 
   const [rankingOpen, setRankingOpen] = useState(false);
   const [isFullscreen, setIsFullscreen] = useState(false);
@@ -168,9 +185,13 @@ export function PresentView({
           </h1>
           <p className="flex flex-wrap items-center gap-2 text-xs font-semibold uppercase tracking-wider text-volt-300">
             {isActive ? (
-              <>
-                {t("present.badge")} · {t("control.round", { number: round?.number })}
-              </>
+              competitive ? (
+                <>{t("present.badge")} · {formatLabel(t, tour.type)}</>
+              ) : (
+                <>
+                  {t("present.badge")} · {t("control.round", { number: round?.number })}
+                </>
+              )
             ) : (
               t("courtPage.finishedTitle")
             )}
@@ -216,7 +237,7 @@ export function PresentView({
               </h2>
               <p className="mt-2 text-sm text-slate-400">{t("present.finishedSubtitle")}</p>
             </div>
-            {podium.length >= 2 && (
+            {!competitive && podium.length >= 2 && (
               <div className="grid w-full gap-4 sm:grid-cols-3">
                 {[1, 0, 2].map((idx) => {
                   const row = podium[idx];
@@ -240,6 +261,27 @@ export function PresentView({
                 })}
               </div>
             )}
+            {competitive && competitivePlacement.length >= 2 && (
+              <div className="grid w-full gap-4 sm:grid-cols-3">
+                {[1, 0, 2].map((idx) => {
+                  const entrant = competitivePlacement[idx];
+                  if (!entrant) return <div key={idx} className="hidden sm:block" />;
+                  const position = idx + 1;
+                  return (
+                    <div
+                      key={entrant.id}
+                      className={cn(
+                        "card card-pad text-center",
+                        position === 1 && "border-volt-400/40 sm:-mt-3"
+                      )}
+                    >
+                      <span className="text-3xl">{["🥇", "🥈", "🥉"][position - 1]}</span>
+                      <h3 className="mt-2 text-lg font-extrabold text-white">{entrant.name}</h3>
+                    </div>
+                  );
+                })}
+              </div>
+            )}
             <div className="flex flex-wrap justify-center gap-3">
               <Link href={`/t/${tournament._id}/results`} className="btn btn-primary btn-lg">
                 {t("courtPage.seeResults")}
@@ -248,6 +290,10 @@ export function PresentView({
                 {t("present.backToControl")}
               </Link>
             </div>
+          </div>
+        ) : competitive ? (
+          <div className="relative m-auto w-full max-w-6xl">
+            <CompetitiveView tournament={tour} t={t} editable />
           </div>
         ) : (
           round && (
@@ -339,8 +385,32 @@ export function PresentView({
         )}
       </main>
 
+      {/* Bottom action bar — competitive (just close) */}
+      {isActive && competitive && (
+        <footer className="sticky bottom-0 z-10 border-t border-white/10 bg-navy-950/95 px-5 py-4 backdrop-blur-md sm:px-8">
+          <div className="mx-auto flex max-w-6xl flex-col gap-3 sm:flex-row sm:items-center">
+            <p className={cn("text-sm", competitiveComplete ? "font-semibold text-volt-300" : "text-slate-400")}>
+              {competitiveComplete
+                ? t("control.competitiveReady")
+                : t("control.competitiveInProgress")}
+            </p>
+            <Button
+              size="lg"
+              variant="danger"
+              className="w-full sm:ml-auto sm:w-auto"
+              onClick={() => {
+                setCloseError(null);
+                setCloseOpen(true);
+              }}
+            >
+              {t("control.closeTournament")}
+            </Button>
+          </div>
+        </footer>
+      )}
+
       {/* Bottom action bar */}
-      {isActive && round && (
+      {isActive && !competitive && round && (
         <footer className="sticky bottom-0 z-10 border-t border-white/10 bg-navy-950/95 px-5 py-4 backdrop-blur-md sm:px-8">
           <div className="mx-auto flex max-w-6xl flex-col gap-3 sm:flex-row sm:items-center">
             {!round.isFinal ? (
@@ -424,13 +494,37 @@ export function PresentView({
               </button>
             </div>
             <p className="mb-4 text-xs uppercase tracking-wider text-slate-500">
-              <Badge tone="blue">{formatLabel(t, tournament.type)}</Badge>
+              <Badge tone="blue">{formatLabel(t, tour.type)}</Badge>
             </p>
-            <StandingsTable standings={standings} t={t} />
-            {standings.length > 0 && medalFor(1) && (
-              <p className="mt-4 text-center text-xs text-slate-500">
-                {standings[0].name} · {standings[0].points} {t("home.pointsLabel")}
-              </p>
+            {competitive ? (
+              <ol className="space-y-1">
+                {competitivePlacement.map((entrant, i) => (
+                  <li
+                    key={entrant.id}
+                    className={cn(
+                      "flex items-center gap-3 rounded-lg px-2 py-1.5",
+                      i < 3 && "bg-volt-400/[0.04]"
+                    )}
+                  >
+                    <span className="w-8 text-center font-bold text-slate-400">
+                      {medalFor(i + 1) ?? i + 1}
+                    </span>
+                    <span className="font-semibold text-white">{entrant.name}</span>
+                    {entrant.players && entrant.players.length > 0 && (
+                      <span className="text-xs text-slate-400">{entrant.players.join(" · ")}</span>
+                    )}
+                  </li>
+                ))}
+              </ol>
+            ) : (
+              <>
+                <StandingsTable standings={standings} t={t} />
+                {standings.length > 0 && medalFor(1) && (
+                  <p className="mt-4 text-center text-xs text-slate-500">
+                    {standings[0].name} · {standings[0].points} {t("home.pointsLabel")}
+                  </p>
+                )}
+              </>
             )}
           </div>
         </div>

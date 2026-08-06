@@ -14,6 +14,7 @@ import { sanitizeEntrantsForPublic } from "@/lib/privacy";
 import {
   TOURNAMENT_TYPES,
   generateNextRound,
+  isCompetitiveType,
   isTeamType,
   makeEntrantId,
   typeLabel,
@@ -21,6 +22,16 @@ import {
   type EngineRound,
   type Entrant,
 } from "@/lib/engine";
+import {
+  buildInitialStructure,
+  validateCompetitiveSetup,
+} from "@/lib/competitive";
+import type {
+  CompetitiveConfigJSON,
+  GroupJSON,
+  ScoringMode,
+  TieJSON,
+} from "@/lib/types";
 
 export const dynamic = "force-dynamic";
 
@@ -47,6 +58,35 @@ export async function GET(
   }
 }
 
+function intOr(value: unknown, fallback: number): number {
+  return typeof value === "number" && Number.isInteger(value) ? value : fallback;
+}
+
+/** Whitelist + coerce the competitive config for the given format. */
+function parseCompetitiveConfig(
+  type: TournamentType,
+  scoring: ScoringMode,
+  raw: unknown
+): CompetitiveConfigJSON {
+  const c = (raw ?? {}) as Record<string, unknown>;
+  const config: CompetitiveConfigJSON = {};
+  if (type === "knockout-team") {
+    config.byeMode = c.byeMode === "playin" ? "playin" : "bye";
+    config.thirdPlace = !!c.thirdPlace;
+  } else if (type === "groups-team") {
+    config.groupCount = intOr(c.groupCount, 2);
+    config.advancePerGroup = intOr(c.advancePerGroup, 2);
+    config.thirdPlace = !!c.thirdPlace;
+  } else if (type === "league-team") {
+    config.leagueDouble = !!c.leagueDouble;
+  }
+  if (scoring === "sets") {
+    const best = intOr(c.bestOfSets, 3);
+    config.bestOfSets = [1, 3, 5].includes(best) ? best : 3;
+  }
+  return config;
+}
+
 export async function POST(
   req: NextRequest,
   { params }: { params: Promise<{ clubId: string }> }
@@ -69,6 +109,8 @@ export async function POST(
       courts?: unknown;
       entrants?: unknown;
       scorePin?: unknown;
+      scoring?: unknown;
+      config?: unknown;
     } | null;
     if (!body || typeof body !== "object") throw new HttpError(400, "Invalid JSON body.");
 
@@ -79,14 +121,18 @@ export async function POST(
     if (!TOURNAMENT_TYPES.some((t) => t.value === type))
       throw new HttpError(400, "Invalid tournament type.");
 
-    const matchPoints = body.matchPoints;
-    if (
-      typeof matchPoints !== "number" ||
-      !Number.isInteger(matchPoints) ||
-      matchPoints < 4 ||
-      matchPoints > 128
-    )
-      throw new HttpError(400, "Match points must be a whole number between 4 and 128.");
+    const competitive = isCompetitiveType(type);
+
+    // Competitive formats (knockout/groups/league) don't use rally-point
+    // match points; they carry a scoring mode + config instead. Only the
+    // Americano/Mexicano path requires a valid matchPoints value.
+    let matchPoints = 24;
+    if (!competitive) {
+      const mp = body.matchPoints;
+      if (typeof mp !== "number" || !Number.isInteger(mp) || mp < 4 || mp > 128)
+        throw new HttpError(400, "Match points must be a whole number between 4 and 128.");
+      matchPoints = mp;
+    }
 
     // Courts: trimmed, non-empty, de-duplicated (order preserved).
     if (Array.isArray(body.courts) && body.courts.length > 32)
@@ -141,14 +187,38 @@ export async function POST(
       scorePin = body.scorePin;
     }
 
-    let firstRound: EngineRound;
-    try {
-      firstRound = generateNextRound({ type, entrants, courts, rounds: [] });
-    } catch (e) {
-      throw new HttpError(
-        400,
-        e instanceof Error ? e.message : "Could not generate round 1."
-      );
+    // Build the initial structure. Competitive formats populate ties/groups/
+    // scoring/config and leave rounds empty; Americano/Mexicano generate round 1.
+    let firstRound: EngineRound | null = null;
+    let scoring: ScoringMode | null = null;
+    let config: CompetitiveConfigJSON | null = null;
+    let groups: GroupJSON[] = [];
+    let ties: TieJSON[] = [];
+
+    if (competitive) {
+      scoring = body.scoring === "sets" ? "sets" : "points";
+      config = parseCompetitiveConfig(type, scoring, body.config);
+      const setupErr = validateCompetitiveSetup(type, scoring, config, entrants.length);
+      if (!setupErr.ok) throw new HttpError(400, setupErr.error);
+      try {
+        const built = buildInitialStructure(type, config, entrants, courts, scoring);
+        groups = built.groups;
+        ties = built.ties;
+      } catch (e) {
+        throw new HttpError(
+          400,
+          e instanceof Error ? e.message : "Could not build the tournament."
+        );
+      }
+    } else {
+      try {
+        firstRound = generateNextRound({ type, entrants, courts, rounds: [] });
+      } catch (e) {
+        throw new HttpError(
+          400,
+          e instanceof Error ? e.message : "Could not generate round 1."
+        );
+      }
     }
 
     const tournament = await Tournament.create({
@@ -158,7 +228,11 @@ export async function POST(
       matchPoints,
       courts,
       entrants,
-      rounds: [firstRound],
+      rounds: firstRound ? [firstRound] : [],
+      scoring,
+      config,
+      groups,
+      ties,
       status: "active",
       pointsAwarded: false,
       playedAt: new Date(),

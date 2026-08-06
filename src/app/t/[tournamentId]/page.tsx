@@ -1,7 +1,8 @@
 import type { Metadata } from "next";
 import Link from "next/link";
 import { notFound } from "next/navigation";
-import { computeStandings } from "@/lib/engine";
+import { computeStandings, isCompetitiveType } from "@/lib/engine";
+import { finalPlacement, hydrateCompetitive } from "@/lib/competitive";
 import { formatLabel } from "@/lib/i18n/formats";
 import { createT } from "@/lib/i18n";
 import { getLocale } from "@/lib/i18n/server";
@@ -12,6 +13,7 @@ import { LiveRefresh } from "@/components/public/LiveRefresh";
 import { Collapsible } from "@/components/public/Collapsible";
 import { ScoreForm } from "@/components/public/ScoreForm";
 import { StandingsTable } from "@/components/public/StandingsTable";
+import { CompetitiveView } from "@/components/competitive/CompetitiveView";
 import {
   currentRound,
   entrantMap,
@@ -33,11 +35,27 @@ export async function generateMetadata({
   const t = createT(await getLocale());
   const isActive = tournament.status === "active";
   const publicEntrants = sanitizeEntrantsForPublic(tournament.entrants);
-  const winner = isActive ? null : computeStandings(publicEntrants, tournament.rounds)[0];
+  let winnerName: string | undefined;
+  if (!isActive) {
+    if (isCompetitiveType(tournament.type)) {
+      const h = hydrateCompetitive({ ...tournament, entrants: publicEntrants });
+      const ids = finalPlacement({
+        type: h.type,
+        scoring: h.scoring ?? "points",
+        config: h.config ?? {},
+        entrants: publicEntrants,
+        groups: h.groups ?? [],
+        ties: h.ties ?? [],
+      });
+      winnerName = publicEntrants.find((e) => e.id === ids[0])?.name;
+    } else {
+      winnerName = computeStandings(publicEntrants, tournament.rounds)[0]?.name;
+    }
+  }
   const description = [
     club?.name,
     formatLabel(t, tournament.type),
-    isActive ? t("tournamentPage.live") : winner ? `🏆 ${winner.name}` : undefined,
+    isActive ? t("tournamentPage.live") : winnerName ? `🏆 ${winnerName}` : undefined,
   ]
     .filter(Boolean)
     .join(" · ");
@@ -57,15 +75,37 @@ export default async function TournamentPage({
   const { tournamentId } = await params;
   const data = await getTournamentWithClub(tournamentId);
   if (!data) notFound();
-  const { tournament, club } = data;
+  const { club } = data;
   const t = createT(await getLocale());
+  const competitive = isCompetitiveType(data.tournament.type);
 
-  const publicEntrants = sanitizeEntrantsForPublic(tournament.entrants);
+  // Public: entrant surnames truncated. Competitive: re-resolve advancement.
+  const baseTournament = {
+    ...data.tournament,
+    entrants: sanitizeEntrantsForPublic(data.tournament.entrants),
+  };
+  const tournament = competitive ? hydrateCompetitive(baseTournament) : baseTournament;
+  const publicEntrants = tournament.entrants;
   const map = entrantMap(publicEntrants);
-  const standings = computeStandings(publicEntrants, tournament.rounds);
-  const round = currentRound(tournament);
   const isActive = tournament.status === "active";
-  const pastRounds = tournament.rounds.filter((r) => r !== round);
+
+  // Competitive podium comes from bracket/table placement; classic from points.
+  const standings = competitive ? [] : computeStandings(publicEntrants, tournament.rounds);
+  const round = competitive ? null : currentRound(tournament);
+  const pastRounds = competitive ? [] : tournament.rounds.filter((r) => r !== round);
+  const competitivePodium = competitive && !isActive
+    ? finalPlacement({
+        type: tournament.type,
+        scoring: tournament.scoring ?? "points",
+        config: tournament.config ?? {},
+        entrants: publicEntrants,
+        groups: tournament.groups ?? [],
+        ties: tournament.ties ?? [],
+      })
+        .slice(0, 3)
+        .map((id) => map[id])
+        .filter(Boolean)
+    : [];
   const podium = standings.slice(0, 3);
 
   return (
@@ -92,8 +132,8 @@ export default async function TournamentPage({
             <Badge tone="blue">{formatLabel(t, tournament.type)}</Badge>
             {isActive ? (
               <Badge tone="volt" className="animate-pulse">
-                {t("tournamentPage.live")} · {t("tournamentPage.round")}{" "}
-                {round?.number}
+                {t("tournamentPage.live")}
+                {!competitive && round ? ` · ${t("tournamentPage.round")} ${round.number}` : ""}
               </Badge>
             ) : (
               <Badge tone="slate">
@@ -103,7 +143,9 @@ export default async function TournamentPage({
               </Badge>
             )}
             <span className="text-xs text-slate-500">
-              {t("tournamentPage.pointsPerMatch", { points: tournament.matchPoints })} ·{" "}
+              {!competitive && (
+                <>{t("tournamentPage.pointsPerMatch", { points: tournament.matchPoints })} · </>
+              )}
               {tournament.courts.length === 1
                 ? t("tournamentPage.courtsCount", { count: tournament.courts.length })
                 : t("tournamentPage.courtsCountPlural", {
@@ -123,7 +165,7 @@ export default async function TournamentPage({
         }
       />
 
-      {!isActive && podium.length >= 2 && (
+      {!isActive && !competitive && podium.length >= 2 && (
         <section className="grid gap-4 sm:grid-cols-3">
           {[1, 0, 2].map((idx) => {
             const row = podium[idx];
@@ -148,6 +190,41 @@ export default async function TournamentPage({
             );
           })}
         </section>
+      )}
+
+      {!isActive && competitive && competitivePodium.length >= 2 && (
+        <section className="grid gap-4 sm:grid-cols-3">
+          {[1, 0, 2].map((idx) => {
+            const entrant = competitivePodium[idx];
+            if (!entrant) return <div key={idx} className="hidden sm:block" />;
+            const position = idx + 1;
+            return (
+              <div
+                key={entrant.id}
+                className={`card card-pad text-center ${
+                  position === 1 ? "border-volt-400/40 sm:-mt-3" : ""
+                }`}
+              >
+                <span className="text-3xl">{["🥇", "🥈", "🥉"][position - 1]}</span>
+                <h3 className="mt-2 text-lg font-extrabold text-white">{entrant.name}</h3>
+                {entrant.players && entrant.players.length > 0 && (
+                  <p className="text-xs text-slate-400">{entrant.players.join(" · ")}</p>
+                )}
+                <p className="mt-1 text-sm font-bold text-volt-300">
+                  {position === 1
+                    ? t("competitive.champion")
+                    : position === 2
+                      ? t("competitive.runnerUp")
+                      : t("competitive.thirdPlace")}
+                </p>
+              </div>
+            );
+          })}
+        </section>
+      )}
+
+      {competitive && (
+        <CompetitiveView tournament={tournament} t={t} editable={isActive} />
       )}
 
       {isActive && round && (
@@ -227,12 +304,14 @@ export default async function TournamentPage({
         </section>
       )}
 
-      <section>
-        <h2 className="section-title mb-4">
-          {isActive ? t("tournamentPage.liveStandings") : t("tournamentPage.finalStandings")}
-        </h2>
-        <StandingsTable standings={standings} t={t} />
-      </section>
+      {!competitive && (
+        <section>
+          <h2 className="section-title mb-4">
+            {isActive ? t("tournamentPage.liveStandings") : t("tournamentPage.finalStandings")}
+          </h2>
+          <StandingsTable standings={standings} t={t} />
+        </section>
+      )}
 
       {pastRounds.length > 0 && (
         <section>

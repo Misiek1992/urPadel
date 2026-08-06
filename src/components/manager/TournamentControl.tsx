@@ -15,9 +15,12 @@ import {
   cn,
 } from "@/components/ui";
 import type { EntrantJSON, TournamentJSON } from "@/lib/types";
+import { isCompetitiveType } from "@/lib/engine";
+import { hydrateCompetitive, isComplete } from "@/lib/competitive";
 import { pointsForPosition } from "@/lib/ranking-points";
 import { ScoreForm } from "@/components/public/ScoreForm";
 import { Collapsible } from "@/components/public/Collapsible";
+import { CompetitiveView } from "@/components/competitive/CompetitiveView";
 import { useLocale, useT } from "@/components/i18n/LocaleProvider";
 
 async function readApiError(res: Response, fallback: string): Promise<string> {
@@ -57,11 +60,24 @@ export function TournamentControl({
   const router = useRouter();
   const t = useT();
   const locale = useLocale();
+  const competitive = isCompetitiveType(tournament.type);
+  // Competitive: re-resolve advancement so the board reflects the latest scores.
+  const tour = competitive ? hydrateCompetitive(tournament) : tournament;
   const map: Record<string, EntrantJSON> = {};
-  for (const e of tournament.entrants) map[e.id] = e;
+  for (const e of tour.entrants) map[e.id] = e;
 
-  const isActive = tournament.status === "active";
-  const round = tournament.rounds[tournament.rounds.length - 1] ?? null;
+  const isActive = tour.status === "active";
+  const round = tour.rounds[tour.rounds.length - 1] ?? null;
+  const competitiveComplete = competitive
+    ? isComplete({
+        type: tour.type,
+        scoring: tour.scoring ?? "points",
+        config: tour.config ?? {},
+        entrants: tour.entrants,
+        groups: tour.groups ?? [],
+        ties: tour.ties ?? [],
+      })
+    : false;
   const pastRounds = tournament.rounds.filter((r) => r !== round);
   const allScored =
     round?.matches.every((m) => m.scoreA != null && m.scoreB != null) ?? false;
@@ -140,6 +156,44 @@ export function TournamentControl({
 
   return (
     <div className="space-y-8">
+      {/* Competitive action bar + board */}
+      {competitive && isActive && (
+        <div className="card card-pad">
+          <div className="mb-4 flex flex-wrap items-center justify-between gap-3 rounded-xl border border-volt-400/20 bg-volt-400/[0.05] px-4 py-3">
+            <p className="text-sm text-slate-300">{t("control.presenterHint")}</p>
+            <Link
+              href={`/manager/tournaments/${tournament._id}/present`}
+              target="_blank"
+              className="btn btn-primary btn-sm shrink-0"
+            >
+              {t("control.openPresenter")}
+            </Link>
+          </div>
+          <div className="flex flex-wrap items-center gap-3">
+            <p className={cn("text-sm", competitiveComplete ? "font-semibold text-volt-300" : "text-slate-400")}>
+              {competitiveComplete
+                ? t("control.competitiveReady")
+                : t("control.competitiveInProgress")}
+            </p>
+            <Button
+              variant="danger"
+              className="ml-auto"
+              onClick={() => {
+                setCloseError(null);
+                setCloseOpen(true);
+              }}
+            >
+              {t("control.closeTournament")}
+            </Button>
+          </div>
+        </div>
+      )}
+      {competitive && (
+        <section>
+          <CompetitiveView tournament={tour} t={t} editable={isActive} />
+        </section>
+      )}
+
       {/* Action bar */}
       {isActive && round && (
         <div className="card card-pad">

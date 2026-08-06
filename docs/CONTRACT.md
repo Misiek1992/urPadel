@@ -84,18 +84,43 @@ secondary. Never introduce other accent colors; never use light backgrounds.
 
 Models: `Club`, `ClubPlayer`, `RankingEntry`, `Tournament`, `AppUser`,
 `AuditLog`. JSON shapes: `ClubJSON`, `ClubPlayerJSON`, `RankingEntryJSON`,
-`TournamentJSON` (with `EntrantJSON`, `RoundJSON`, `MatchJSON`),
+`TournamentJSON` (with `EntrantJSON`, `RoundJSON`, `MatchJSON`, and — for
+competitive formats — `TieJSON`, `GroupJSON`, `CompetitiveConfigJSON`),
 `RankingRowJSON`, `AuditLogJSON`, `ViewerJSON`.
+
+Two tournament paradigms share the `Tournament` doc:
+- **Americano / Mexicano** (individual or `-team`): the rotating-round model —
+  `rounds[]`, rally-point scoring, `computeStandings`. UNCHANGED.
+- **Competitive team formats** (`knockout-team`, `groups-team`, `league-team` —
+  gated by `isCompetitiveType(type)`): a parallel bracket/group/league model
+  using `scoring`/`config`/`groups`/`ties` instead of `rounds[]`. See
+  `src/lib/competitive/`.
 
 Key semantics:
 
 - `Tournament.entrants[]`: individual formats → one entrant per player
-  (`players` empty). Team formats → one entrant per TEAM, `name: "Anna / Piotr"`,
-  `players: ["Anna", "Piotr"]`.
+  (`players` empty). Team formats (all `-team`, including the competitive ones) →
+  one entrant per TEAM, `name: "Anna / Piotr"`, `players: ["Anna", "Piotr"]`.
 - `Match.sideA/sideB`: entrant **ids** — 2 per side (individual), 1 per side (team).
 - `Match.scoreA/scoreB`: rally points; `null` until entered; must sum to
   `tournament.matchPoints`.
 - `Round.byes`: entrant ids resting that round.
+- Competitive-only fields (empty/null for Americano/Mexicano):
+  - `scoring: "points" | "sets"` — "points" is one number per side (higher wins,
+    no draws); "sets" is games per set. No draws in either mode.
+  - `config: CompetitiveConfigJSON` — `{groupCount?, advancePerGroup?,
+    byeMode?: "bye"|"playin", thirdPlace?, leagueDouble?, bestOfSets?}`.
+  - `groups: GroupJSON[]` — `{label, entrantIds}` (group stage only).
+  - `ties: TieJSON[]` — every match, each with a **stable `id`**. A `TieSide` is
+    either a resolved `entrantId` or a `source` reference resolved as results
+    come in: `{type:"winner"|"loser", tieId}`, `{type:"group", group, place}`, or
+    `{type:"bye"}`. `stage: "league"|"group"|"knockout"|"playin"`; `winner:
+    "A"|"B"|null`; `score: {a?,b?}` (points) or `{sets:[{a,b}]}` (sets). A tie is
+    **playable** when both sides are resolved, unscored and undecided
+    (`isPlayable`). Byes are pre-decided at build. `resolveTies` (idempotent)
+    fills resolvable source slots + sets winners after every score; `finalPlacement`
+    gives the ranking order. `ties`/`groups` are DERIVED and re-resolved on every
+    read via `hydrateCompetitive` — the durable truth is each tie's `score`+`winner`.
 - `Tournament.status`: `"active" | "finished"`. `playedAt` = tournament date.
 - `Tournament.createdByName`: the manager who created it, as a **display
   name** (Clerk `firstName`+`lastName`, falling back to `username`; see
@@ -160,11 +185,21 @@ Key semantics:
 
 From `@/lib/engine`:
 - `TOURNAMENT_TYPES: {value,label,description}[]`, `MATCH_POINTS_OPTIONS = [16,21,24,32]`
-- `isTeamType(type)`, `isMexicanoType(type)`, `typeLabel(type)`, `makeEntrantId()`
+- `isTeamType(type)`, `isMexicanoType(type)`, `isCompetitiveType(type)`, `typeLabel(type)`, `makeEntrantId()`
 - `validateTournamentSetup(type, entrantCount, courtCount): string | null`
-- `generateNextRound({type, entrants, courts, rounds, final?}): EngineRound` (throws Error with user-readable message)
+- `generateNextRound({type, entrants, courts, rounds, final?}): EngineRound` (throws Error with user-readable message) — Americano/Mexicano only
 - `computeStandings(entrants, rounds): StandingRow[]` — sorted; `StandingRow = {entrantId,name,players?,points,played,wins,draws,losses,diff}`
 - `roundPointsByEntrant(round): Map<string, number | null>` — for the per-round results matrix
+
+From `@/lib/competitive` (competitive team formats — import, don't reimplement):
+- `buildInitialStructure(type, config, entrants, courts, scoring): {groups, ties}` — creates the bracket/group/league at creation (auto-resolves byes, assigns courts)
+- `validateCompetitiveSetup(type, scoring, config, teamCount): {ok:true} | {ok:false, error}`
+- `resolveTies(t): TieJSON[]` (pure, idempotent) — fill source slots + set winners
+- `hydrateCompetitive(tournamentJSON): TournamentJSON` — re-resolve `ties` + reassign courts on read (no-op for non-competitive); call at EVERY read boundary
+- `isPlayable(tie, scoring)`, `isComplete(t)`, `assignCourts(ties, courts, scoring)`
+- `finalPlacement(t): entrantId[]` — bracket/table placement; REPLACES `computeStandings` for ranking on competitive types
+- `leagueTable(entrants, ties, scoring)` / `groupTable(group, ties, entrants, scoring): StandingRow[]` — render via `StandingsTable`
+- `validateScore(score, scoring, config)`, `winnerOf(score, scoring)`, `scoreEntered(...)`
 
 From `@/lib/ranking`:
 - `pointsForPosition(position)`, `RANKING_WINDOW_DAYS`
@@ -222,12 +257,13 @@ All routes under `src/app/api/`. Auth column: `public` (none), `manager`
 | `PATCH /api/ranking-entries/[entryId]` | manager of entry's club | `{points?, note?}` → `{entry}` |
 | `DELETE /api/ranking-entries/[entryId]` | manager of entry's club | → `{ok:true}` |
 | `GET /api/clubs/[clubId]/tournaments` | public | → `{tournaments: TournamentJSON[]}` newest `playedAt` first — each tournament's `entrants` truncated via `sanitizeEntrantsForPublic` |
-| `POST /api/clubs/[clubId]/tournaments` | manager | `{name, type, matchPoints, courts: string[], entrants: {name, players?}[], scorePin?}` → `{tournament}` — validate with `validateTournamentSetup` (team types: each entrant needs exactly 2 players; matchPoints int 4–128; courts ≤32 non-empty/trimmed/unique; entrants ≤128). Server assigns entrant ids via `makeEntrantId()`, generates round 1 with `generateNextRound`, status `active`, `playedAt` now, `createdByName` set from `getSessionName()`. `scorePin` optional, 4-6 digits or omitted; response is run through `sanitizeTournament` so it's never echoed back |
-| `GET /api/tournaments/[tournamentId]` | public | → `{tournament: TournamentJSON, standings: StandingRow[]}` — `entrants`/`standings` names truncated via `sanitizeEntrantsForPublic` (only consumer today: `CourtLive`'s polling) |
+| `POST /api/clubs/[clubId]/tournaments` | manager | `{name, type, courts: string[], entrants: {name, players?}[], scorePin?}` + either `matchPoints` (Americano/Mexicano) or `{scoring, config}` (competitive) → `{tournament}` — validate with `validateTournamentSetup` (team types: each entrant needs exactly 2 players; courts ≤32 non-empty/trimmed/unique; entrants ≤128). **Americano/Mexicano**: `matchPoints` int 4–128, generates round 1 with `generateNextRound`. **Competitive** (`isCompetitiveType`): `matchPoints` ignored, requires `scoring:"points"|"sets"` + `config` (whitelisted/coerced per format), validated by `validateCompetitiveSetup`, built by `buildInitialStructure` into `groups`/`ties` (`rounds` stays empty). Server assigns entrant ids via `makeEntrantId()`, status `active`, `playedAt` now, `createdByName` from `getSessionName()`. `scorePin` optional, 4-6 digits; response run through `sanitizeTournament` |
+| `GET /api/tournaments/[tournamentId]` | public | → `{tournament: TournamentJSON, standings: StandingRow[]}` — `entrants`/`standings` names truncated via `sanitizeEntrantsForPublic`; competitive tournaments are re-resolved via `hydrateCompetitive` before responding (only consumer today: `CourtLive`'s polling) |
 | `DELETE /api/tournaments/[tournamentId]` | manager | → `{ok:true}` (any status; also delete its RankingEntry docs if pointsAwarded) |
 | `POST /api/tournaments/[tournamentId]/rounds` | manager | `{final?: boolean}` → `{tournament}` — 400 if status ≠ active; 400 "Enter all results for round N first" if current round has null scores; 400 if current round `isFinal` ("Final round played — close the tournament"); 409 if another request already advanced the round since this one read it (client should refresh) |
-| `POST /api/tournaments/[tournamentId]/result` | public | `{roundNumber, court, scoreA, scoreB, pin?}` → `{tournament}` — integers ≥ 0 summing to `matchPoints` (else 400). Public callers may only set a result for the CURRENT (last) round when that match's scores are still null; a signed-in club manager may edit any round's result (and never needs a PIN). 400 if tournament finished. If the tournament has `scorePin` set, non-manager callers must supply a matching `pin`: 403 `{error, code:"pin_required"}` if omitted, 403 `{error, code:"pin_invalid"}` if wrong — `HttpError`'s third constructor arg carries `code` through `apiError`. Rate-limited (20 req/min per IP+tournament). Written via an atomic positional `updateOne` (arrayFilters on round number + court, plus `scoreA:null` for non-managers) so two courts submitting simultaneously can't clobber each other; an idempotent resubmit of the same values is treated as success. Response's `entrants` truncated via `sanitizeEntrantsForPublic` (`publicTournament()` helper in this route) |
-| `POST /api/tournaments/[tournamentId]/close` | manager | → `{tournament}` — atomically transitions `active`→`finished` (400 if already closed, including when raced concurrently) and flips `pointsAwarded` false→true; only the request that wins that flip runs `awardTournamentPoints(t)`, so concurrent closes can't double-award. Can be called in any round (unfinished matches simply don't count) |
+| `POST /api/tournaments/[tournamentId]/result` | public | `{roundNumber, court, scoreA, scoreB, pin?}` → `{tournament}` — Americano/Mexicano only. integers ≥ 0 summing to `matchPoints` (else 400). Public callers may only set a result for the CURRENT (last) round when that match's scores are still null; a signed-in club manager may edit any round's result (and never needs a PIN). 400 if tournament finished. If the tournament has `scorePin` set, non-manager callers must supply a matching `pin`: 403 `{error, code:"pin_required"}` if omitted, 403 `{error, code:"pin_invalid"}` if wrong — `HttpError`'s third constructor arg carries `code` through `apiError`. Rate-limited (20 req/min per IP+tournament). Written via an atomic positional `updateOne` (arrayFilters on round number + court, plus `scoreA:null` for non-managers) so two courts submitting simultaneously can't clobber each other; an idempotent resubmit of the same values is treated as success. Response's `entrants` truncated via `sanitizeEntrantsForPublic` (`publicTournament()` helper in this route) |
+| `POST /api/tournaments/[tournamentId]/tie-result` | public | `{tieId, score, pin?}` → `{tournament}` — competitive formats only (400 otherwise). `score` is `{a,b}` (points) or `{sets:[{a,b}]}` (sets), validated by `validateScore` for the tournament's `scoring` mode (no draws; sets ≤ `bestOfSets`). Only a **playable** tie (both sides resolved, unscored, undecided) may be scored — by a manager, or publicly with the court PIN (same `pin_required`/`pin_invalid` gate as `/result`); a scored tie returns 409 (idempotent resubmit of the same score succeeds). Atomic positional `updateOne` (arrayFilters `t.id`+`t.winner:null`+both sides resolved) sets score + winner; a best-effort follow-up persists the recomputed `ties` (`resolveTies`+`assignCourts`). Rate-limited (20/min per IP+tournament). Response re-resolved + truncated. No editing of already-scored ties in v1 (advancement unwind is out of scope) |
+| `POST /api/tournaments/[tournamentId]/close` | manager | → `{tournament}` — atomically transitions `active`→`finished` (400 if already closed, including when raced concurrently) and flips `pointsAwarded` false→true; only the request that wins that flip runs `awardTournamentPoints(t)`, so concurrent closes can't double-award. Ranking order comes from `finalPlacement` for competitive types, `computeStandings` otherwise (both members of a team get the team's position points). Can be called at any point (unplayed matches simply don't count) |
 | `GET /api/superadmins` | superadmin | → `{emails: string[]}` (include DEFAULT_SUPERADMIN, mark it non-removable) |
 | `POST /api/superadmins` | superadmin | `{email}` → `{emails}` |
 | `DELETE /api/superadmins?email=` | superadmin | → `{emails}` (400 when removing DEFAULT_SUPERADMIN) |
@@ -255,6 +291,21 @@ Every mutation calls `logAction` with a concise action slug
    team's points. Points live in `RankingEntry` and count for 365 days.
 5. Byes: entrants that don't fit on courts rest; engine rotates rests fairly;
    show resting names each round with a "resting" badge.
+
+**Competitive formats** (`knockout-team`/`groups-team`/`league-team`) don't use
+rounds 1–3 above. Instead:
+- Creation builds the whole structure up front (`buildInitialStructure`): a random
+  knockout bracket (byes or a play-in round for non-power-of-two fields), or
+  round-robin groups + a group-seeded knockout, or a single/double round-robin
+  league. Byes are pre-decided.
+- Scoring a **tie** (`/tie-result`) sets its winner and `resolveTies` advances the
+  winner into the next slot automatically — there is no "next round" button. Group
+  winners seed the knockout once every group tie is scored.
+- There's no rally-point sum: "points" mode is higher-score-wins, "sets" mode is
+  games-per-set. No draws.
+- `isComplete` (final decided / all league ties played) gates the manager's Close
+  action; closing ranks by `finalPlacement` (champion → runner-up → SF losers → …,
+  or league/group table order) and awards the same position points.
 
 ## Route map (pages)
 

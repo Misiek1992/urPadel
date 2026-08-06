@@ -17,13 +17,20 @@ import {
   Textarea,
   cn,
 } from "@/components/ui";
-import type { ClubPlayerJSON, TournamentJSON } from "@/lib/types";
+import type {
+  ClubPlayerJSON,
+  CompetitiveConfigJSON,
+  ScoringMode,
+  TournamentJSON,
+} from "@/lib/types";
 import {
   MATCH_POINTS_OPTIONS,
+  isCompetitiveType,
   isTeamType,
   validateTournamentSetup,
   type TournamentType,
 } from "@/lib/engine";
+import { validateCompetitiveSetup } from "@/lib/competitive";
 import { formatLabel, formatOptions } from "@/lib/i18n/formats";
 import { parsePlayersText } from "@/lib/players-import";
 import { useLocale, useT } from "@/components/i18n/LocaleProvider";
@@ -42,6 +49,198 @@ function defaultName(t: Translator, type: TournamentType): string {
 function pluralSuffix(count: number, locale: "en" | "pl", en: string, pl: string): string {
   if (count === 1) return "";
   return locale === "pl" ? pl : en;
+}
+
+function seedingNote(t: Translator, type: TournamentType): string {
+  switch (type) {
+    case "knockout-team":
+      return t("wizard.seedingNoteKnockout");
+    case "groups-team":
+      return t("wizard.seedingNoteGroups");
+    case "league-team":
+      return t("wizard.seedingNoteLeague");
+    case "mexicano":
+    case "mexicano-team":
+      return t("wizard.seedingNoteMexicano");
+    default:
+      return t("wizard.seedingNoteOther");
+  }
+}
+
+/** A segmented pill toggle used across the competitive-format options. */
+function Segment<T extends string | number>({
+  value,
+  options,
+  onChange,
+}: {
+  value: T;
+  options: { value: T; label: string }[];
+  onChange: (v: T) => void;
+}) {
+  return (
+    <div className="flex flex-wrap items-center gap-2">
+      {options.map((o) => (
+        <button
+          key={String(o.value)}
+          type="button"
+          onClick={() => onChange(o.value)}
+          className={cn(
+            "rounded-xl px-4 py-2 text-sm font-bold transition-colors",
+            value === o.value
+              ? "bg-volt-400 text-navy-950"
+              : "border border-white/10 bg-white/5 text-slate-300 hover:bg-white/10"
+          )}
+        >
+          {o.label}
+        </button>
+      ))}
+    </div>
+  );
+}
+
+function CompetitiveOptions({
+  type,
+  scoring,
+  setScoring,
+  bestOfSets,
+  setBestOfSets,
+  byeMode,
+  setByeMode,
+  thirdPlace,
+  setThirdPlace,
+  groupCount,
+  setGroupCount,
+  advancePerGroup,
+  setAdvancePerGroup,
+  leagueDouble,
+  setLeagueDouble,
+  t,
+}: {
+  type: TournamentType;
+  scoring: ScoringMode;
+  setScoring: (v: ScoringMode) => void;
+  bestOfSets: number;
+  setBestOfSets: (v: number) => void;
+  byeMode: "bye" | "playin";
+  setByeMode: (v: "bye" | "playin") => void;
+  thirdPlace: boolean;
+  setThirdPlace: (v: boolean) => void;
+  groupCount: number;
+  setGroupCount: (v: number) => void;
+  advancePerGroup: number;
+  setAdvancePerGroup: (v: number) => void;
+  leagueDouble: boolean;
+  setLeagueDouble: (v: boolean) => void;
+  t: Translator;
+}) {
+  return (
+    <div className="space-y-5">
+      <div>
+        <label className="label">{t("wizard.scoringLabel")}</label>
+        <Segment
+          value={scoring}
+          onChange={setScoring}
+          options={[
+            { value: "points", label: t("wizard.scoringPoints") },
+            { value: "sets", label: t("wizard.scoringSets") },
+          ]}
+        />
+        {scoring === "sets" && (
+          <div className="mt-3">
+            <label className="label">{t("wizard.bestOfLabel")}</label>
+            <Segment
+              value={bestOfSets}
+              onChange={setBestOfSets}
+              options={[1, 3, 5].map((n) => ({ value: n, label: t("wizard.bestOfValue", { n }) }))}
+            />
+          </div>
+        )}
+      </div>
+
+      {type === "knockout-team" && (
+        <>
+          <div>
+            <label className="label">{t("wizard.knockoutFirstRound")}</label>
+            <Segment
+              value={byeMode}
+              onChange={setByeMode}
+              options={[
+                { value: "bye", label: t("wizard.byeModeByes") },
+                { value: "playin", label: t("wizard.byeModePlayin") },
+              ]}
+            />
+            <p className="mt-2 text-xs text-slate-500">{t("wizard.byeModeHint")}</p>
+          </div>
+          <ThirdPlaceToggle value={thirdPlace} onChange={setThirdPlace} t={t} />
+        </>
+      )}
+
+      {type === "groups-team" && (
+        <>
+          <div>
+            <label className="label">{t("wizard.groupCountLabel")}</label>
+            <div className="flex items-center gap-3">
+              <Button variant="secondary" size="sm" onClick={() => setGroupCount(Math.max(2, groupCount - 1))}>
+                −
+              </Button>
+              <span className="w-10 text-center text-2xl font-extrabold text-white">{groupCount}</span>
+              <Button variant="secondary" size="sm" onClick={() => setGroupCount(Math.min(8, groupCount + 1))}>
+                +
+              </Button>
+            </div>
+          </div>
+          <div>
+            <label className="label">{t("wizard.advanceLabel")}</label>
+            <Segment
+              value={advancePerGroup}
+              onChange={setAdvancePerGroup}
+              options={[
+                { value: 1, label: t("wizard.advanceValue", { n: 1 }) },
+                { value: 2, label: t("wizard.advanceValue", { n: 2 }) },
+              ]}
+            />
+          </div>
+          <ThirdPlaceToggle value={thirdPlace} onChange={setThirdPlace} t={t} />
+        </>
+      )}
+
+      {type === "league-team" && (
+        <div>
+          <label className="label">{t("wizard.leagueLegsLabel")}</label>
+          <Segment
+            value={leagueDouble ? "double" : "single"}
+            onChange={(v) => setLeagueDouble(v === "double")}
+            options={[
+              { value: "single", label: t("wizard.leagueSingle") },
+              { value: "double", label: t("wizard.leagueDouble") },
+            ]}
+          />
+        </div>
+      )}
+    </div>
+  );
+}
+
+function ThirdPlaceToggle({
+  value,
+  onChange,
+  t,
+}: {
+  value: boolean;
+  onChange: (v: boolean) => void;
+  t: Translator;
+}) {
+  return (
+    <label className="flex cursor-pointer items-center gap-2.5 text-sm text-slate-200">
+      <input
+        type="checkbox"
+        checked={value}
+        onChange={(e) => onChange(e.target.checked)}
+        className="h-4 w-4 accent-[#d9f954]"
+      />
+      {t("wizard.thirdPlaceLabel")}
+    </label>
+  );
 }
 
 export function TournamentWizard({
@@ -71,6 +270,15 @@ export function TournamentWizard({
   const [customPoints, setCustomPoints] = useState("");
   const [scorePin, setScorePin] = useState("");
 
+  // Competitive-format options (knockout / groups / league).
+  const [scoring, setScoring] = useState<ScoringMode>("points");
+  const [bestOfSets, setBestOfSets] = useState<number>(3);
+  const [byeMode, setByeMode] = useState<"bye" | "playin">("bye");
+  const [thirdPlace, setThirdPlace] = useState(false);
+  const [groupCount, setGroupCount] = useState(2);
+  const [advancePerGroup, setAdvancePerGroup] = useState(2);
+  const [leagueDouble, setLeagueDouble] = useState(false);
+
   const [players, setPlayers] = useState<string[]>([]);
   const [quickAdd, setQuickAdd] = useState("");
   const [importText, setImportText] = useState("");
@@ -85,10 +293,19 @@ export function TournamentWizard({
   const [submitError, setSubmitError] = useState<string | null>(null);
 
   const team = isTeamType(type);
+  const competitive = isCompetitiveType(type);
   const playersLower = useMemo(
     () => new Set(players.map((p) => p.toLowerCase())),
     [players]
   );
+
+  const config = useMemo<CompetitiveConfigJSON>(() => {
+    const sets = scoring === "sets" ? { bestOfSets } : {};
+    if (type === "knockout-team") return { byeMode, thirdPlace, ...sets };
+    if (type === "groups-team") return { groupCount, advancePerGroup, thirdPlace, ...sets };
+    if (type === "league-team") return { leagueDouble, ...sets };
+    return {};
+  }, [type, scoring, bestOfSets, byeMode, thirdPlace, groupCount, advancePerGroup, leagueDouble]);
 
   const teams = useMemo(() => {
     if (!team) return [];
@@ -124,7 +341,13 @@ export function TournamentWizard({
   const parsedImport = useMemo(() => parsePlayersText(importText), [importText]);
   const importNew = parsedImport.filter((n) => !playersLower.has(n.toLowerCase()));
 
-  const setupError = validateTournamentSetup(type, entrantCount, courts.length);
+  const baseSetupError = validateTournamentSetup(type, entrantCount, courts.length);
+  const competitiveError = useMemo(() => {
+    if (!competitive) return null;
+    const r = validateCompetitiveSetup(type, scoring, config, entrantCount);
+    return r.ok ? null : r.error;
+  }, [competitive, type, scoring, config, entrantCount]);
+  const setupError = baseSetupError ?? competitiveError;
   const oddPlayerForTeams = team && players.length % 2 !== 0;
   const byeWarning = !team && players.length >= 4 && players.length % 4 !== 0;
   const teamByeWarning = team && teams.length >= 2 && teams.length % 2 !== 0;
@@ -204,10 +427,10 @@ export function TournamentWizard({
         body: JSON.stringify({
           name: name.trim(),
           type,
-          matchPoints,
           courts,
           entrants,
           scorePin: scorePin || undefined,
+          ...(competitive ? { scoring, config } : { matchPoints }),
         }),
       });
       const data = (await res.json().catch(() => null)) as
@@ -315,50 +538,71 @@ export function TournamentWizard({
                 }}
               />
             </div>
-            <div>
-              <label className="label">{t("wizard.basicsPointsLabel")}</label>
-              <div className="flex flex-wrap items-center gap-2">
-                {MATCH_POINTS_OPTIONS.map((pts) => (
-                  <button
-                    key={pts}
-                    type="button"
-                    onClick={() => {
-                      setMatchPoints(pts);
-                      setCustomPoints("");
+            {competitive ? (
+              <CompetitiveOptions
+                type={type}
+                scoring={scoring}
+                setScoring={setScoring}
+                bestOfSets={bestOfSets}
+                setBestOfSets={setBestOfSets}
+                byeMode={byeMode}
+                setByeMode={setByeMode}
+                thirdPlace={thirdPlace}
+                setThirdPlace={setThirdPlace}
+                groupCount={groupCount}
+                setGroupCount={setGroupCount}
+                advancePerGroup={advancePerGroup}
+                setAdvancePerGroup={setAdvancePerGroup}
+                leagueDouble={leagueDouble}
+                setLeagueDouble={setLeagueDouble}
+                t={t}
+              />
+            ) : (
+              <div>
+                <label className="label">{t("wizard.basicsPointsLabel")}</label>
+                <div className="flex flex-wrap items-center gap-2">
+                  {MATCH_POINTS_OPTIONS.map((pts) => (
+                    <button
+                      key={pts}
+                      type="button"
+                      onClick={() => {
+                        setMatchPoints(pts);
+                        setCustomPoints("");
+                      }}
+                      className={cn(
+                        "rounded-xl px-4 py-2 text-sm font-bold transition-colors",
+                        matchPoints === pts && customPoints === ""
+                          ? "bg-volt-400 text-navy-950"
+                          : "border border-white/10 bg-white/5 text-slate-300 hover:bg-white/10"
+                      )}
+                    >
+                      {pts}
+                    </button>
+                  ))}
+                  <Input
+                    type="number"
+                    min={4}
+                    max={128}
+                    value={customPoints}
+                    onChange={(e) => {
+                      setCustomPoints(e.target.value);
+                      const v = Number(e.target.value);
+                      if (Number.isInteger(v) && v >= 4 && v <= 128) setMatchPoints(v);
                     }}
-                    className={cn(
-                      "rounded-xl px-4 py-2 text-sm font-bold transition-colors",
-                      matchPoints === pts && customPoints === ""
-                        ? "bg-volt-400 text-navy-950"
-                        : "border border-white/10 bg-white/5 text-slate-300 hover:bg-white/10"
-                    )}
-                  >
-                    {pts}
-                  </button>
-                ))}
-                <Input
-                  type="number"
-                  min={4}
-                  max={128}
-                  value={customPoints}
-                  onChange={(e) => {
-                    setCustomPoints(e.target.value);
-                    const v = Number(e.target.value);
-                    if (Number.isInteger(v) && v >= 4 && v <= 128) setMatchPoints(v);
-                  }}
-                  placeholder={t("wizard.customPointsPlaceholder")}
-                  className="w-24"
-                  aria-label={t("wizard.customPointsPlaceholder")}
-                />
+                    placeholder={t("wizard.customPointsPlaceholder")}
+                    className="w-24"
+                    aria-label={t("wizard.customPointsPlaceholder")}
+                  />
+                </div>
+                <p className="mt-2 text-xs text-slate-500">
+                  {t("wizard.matchEndsHint", {
+                    points: matchPoints,
+                    a: Math.ceil(matchPoints * 0.66),
+                    b: matchPoints - Math.ceil(matchPoints * 0.66),
+                  })}
+                </p>
               </div>
-              <p className="mt-2 text-xs text-slate-500">
-                {t("wizard.matchEndsHint", {
-                  points: matchPoints,
-                  a: Math.ceil(matchPoints * 0.66),
-                  b: matchPoints - Math.ceil(matchPoints * 0.66),
-                })}
-              </p>
-            </div>
+            )}
             <div>
               <label className="label">{t("wizard.scorePinLabel")}</label>
               <Input
@@ -700,10 +944,21 @@ export function TournamentWizard({
                   : t("wizard.reviewPlayersValue", { count: entrantCount })}
               </dd>
             </div>
-            <div>
-              <dt className="label">{t("wizard.reviewPoints")}</dt>
-              <dd className="font-semibold text-white">{matchPoints}</dd>
-            </div>
+            {competitive ? (
+              <div>
+                <dt className="label">{t("wizard.reviewScoring")}</dt>
+                <dd className="font-semibold text-white">
+                  {scoring === "sets"
+                    ? t("wizard.reviewScoringSets", { n: bestOfSets })
+                    : t("wizard.reviewScoringPoints")}
+                </dd>
+              </div>
+            ) : (
+              <div>
+                <dt className="label">{t("wizard.reviewPoints")}</dt>
+                <dd className="font-semibold text-white">{matchPoints}</dd>
+              </div>
+            )}
             <div>
               <dt className="label">{t("wizard.reviewPin")}</dt>
               <dd className="font-semibold text-white">
@@ -725,10 +980,7 @@ export function TournamentWizard({
             <p className="mt-4 text-sm font-medium text-red-400">{setupError}</p>
           ) : (
             <p className="mt-4 text-xs text-slate-500">
-              {t("wizard.seedingNotePrefix")}{" "}
-              {type.startsWith("mexicano")
-                ? t("wizard.seedingNoteMexicano")
-                : t("wizard.seedingNoteOther")}
+              {t("wizard.seedingNotePrefix")} {seedingNote(t, type)}
             </p>
           )}
           <ErrorText>{submitError}</ErrorText>

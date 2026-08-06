@@ -89,19 +89,79 @@ const EntrantSchema = new Schema(
   { _id: false }
 );
 
+// --- Competitive formats (knockout / groups+knockout / league) -------------
+// A `Tie` is a single competitive match with a STABLE `id` (unlike the
+// Americano/Mexicano Match, which is addressed by court). Sides may be a
+// resolved entrant or a `source` reference (winner-of / group-place) filled in
+// as results come in. Scoring is either "points" (a/b, higher wins) or "sets".
+const TieSideSchema = new Schema(
+  {
+    entrantId: { type: String, default: null },
+    // { type: "winner"|"loser"|"group", tieId?, group?, place? }
+    source: { type: Schema.Types.Mixed, default: null },
+  },
+  { _id: false }
+);
+const TieScoreSchema = new Schema(
+  {
+    a: { type: Number, default: null },
+    b: { type: Number, default: null },
+    sets: {
+      type: [{ a: { type: Number }, b: { type: Number }, _id: false }],
+      default: undefined,
+    },
+  },
+  { _id: false }
+);
+const TieSchema = new Schema(
+  {
+    id: { type: String, required: true },
+    stage: { type: String, enum: ["league", "group", "knockout", "playin"], required: true },
+    group: { type: String, default: null },
+    round: { type: Number, required: true },
+    label: { type: String, default: null },
+    court: { type: String, default: null },
+    sideA: { type: TieSideSchema, required: true },
+    sideB: { type: TieSideSchema, required: true },
+    score: { type: TieScoreSchema, default: () => ({}) },
+    winner: { type: String, enum: ["A", "B", null], default: null },
+  },
+  { _id: false }
+);
+const GroupSchema = new Schema(
+  {
+    label: { type: String, required: true },
+    entrantIds: { type: [String], default: [] },
+  },
+  { _id: false }
+);
+
 const TournamentSchema = new Schema(
   {
     clubId: { type: Schema.Types.ObjectId, ref: "Club", required: true },
     name: { type: String, required: true, trim: true },
     type: {
       type: String,
-      enum: ["americano", "mexicano", "americano-team", "mexicano-team"],
+      enum: [
+        "americano",
+        "mexicano",
+        "americano-team",
+        "mexicano-team",
+        "knockout-team",
+        "groups-team",
+        "league-team",
+      ],
       required: true,
     },
     matchPoints: { type: Number, default: 24 },
     courts: { type: [String], default: [] },
     entrants: { type: [EntrantSchema], default: [] },
     rounds: { type: [RoundSchema], default: [] },
+    // Competitive formats only (empty for Americano/Mexicano):
+    scoring: { type: String, enum: ["points", "sets"], default: null },
+    config: { type: Schema.Types.Mixed, default: null },
+    groups: { type: [GroupSchema], default: [] },
+    ties: { type: [TieSchema], default: [] },
     status: { type: String, enum: ["active", "finished"], default: "active" },
     pointsAwarded: { type: Boolean, default: false },
     playedAt: { type: Date, default: Date.now },

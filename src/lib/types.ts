@@ -6,9 +6,68 @@ export type TournamentType =
   | "americano"
   | "mexicano"
   | "americano-team"
-  | "mexicano-team";
+  | "mexicano-team"
+  | "knockout-team"
+  | "groups-team"
+  | "league-team";
 
 export type TournamentStatus = "active" | "finished";
+
+// --- Competitive formats (knockout / groups+knockout / league) ------------
+// These use `ties`/`groups`/`config`/`scoring` on the tournament instead of
+// the Americano/Mexicano `rounds[]` model.
+
+export type ScoringMode = "points" | "sets";
+
+/** One side of a tie: either a resolved entrant, or a reference resolved later. */
+export interface TieSideJSON {
+  entrantId?: string | null;
+  /** For bracket/group slots not yet decided, or a bye (no opponent). */
+  source?:
+    | { type: "winner"; tieId: string }
+    | { type: "loser"; tieId: string }
+    | { type: "group"; group: string; place: number }
+    | { type: "bye" };
+}
+
+export interface TieScoreJSON {
+  /** "points" mode: one number per side. */
+  a?: number | null;
+  b?: number | null;
+  /** "sets" mode: games per set. */
+  sets?: { a: number; b: number }[];
+}
+
+export type TieStage = "league" | "group" | "knockout" | "playin";
+
+export interface TieJSON {
+  id: string;
+  stage: TieStage;
+  group?: string | null;
+  /** Ordering within a stage (bracket depth / league round / group round). */
+  round: number;
+  /** e.g. "Final", "Semi-final", "Group A". */
+  label?: string | null;
+  court?: string | null;
+  sideA: TieSideJSON;
+  sideB: TieSideJSON;
+  score: TieScoreJSON;
+  winner: "A" | "B" | null;
+}
+
+export interface GroupJSON {
+  label: string;
+  entrantIds: string[];
+}
+
+export interface CompetitiveConfigJSON {
+  groupCount?: number;
+  advancePerGroup?: number;
+  byeMode?: "bye" | "playin";
+  thirdPlace?: boolean;
+  leagueDouble?: boolean;
+  bestOfSets?: number;
+}
 
 export interface EntrantJSON {
   /** Stable short id, unique within the tournament */
@@ -51,6 +110,11 @@ export interface TournamentJSON {
   playedAt: string;
   finishedAt?: string | null;
   createdByName?: string | null;
+  // Competitive formats only (empty/absent for Americano/Mexicano):
+  scoring?: ScoringMode;
+  config?: CompetitiveConfigJSON;
+  groups?: GroupJSON[];
+  ties?: TieJSON[];
   createdAt: string;
   updatedAt: string;
 }

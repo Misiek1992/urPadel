@@ -489,7 +489,34 @@ const pl: Dictionary = {
     seedingNoteMexicano: "losowanie.",
     seedingNoteOther:
       "zoptymalizowany rozkład minimalizujący powtarzających się partnerów i przeciwników.",
-    seedingNotePrefix: "Runda 1 zostanie wygenerowana w momencie startu —",
+    seedingNoteKnockout:
+      "losowana drabinka na wylot. Wpisuj wyniki, a zwycięzcy awansują automatycznie.",
+    seedingNoteGroups:
+      "najpierw grupy round-robin, potem drabinka rozstawiona wg miejsc w grupach.",
+    seedingNoteLeague:
+      "tabela ligowa round-robin ustawiana wg punktów meczowych.",
+    seedingNotePrefix: "Losowanie zostanie wygenerowane w momencie startu —",
+    // Opcje formatów rywalizacyjnych (krok podstawy)
+    scoringLabel: "Punktacja",
+    scoringPoints: "Punkty",
+    scoringSets: "Sety",
+    bestOfLabel: "Do ilu wygranych",
+    bestOfValue: "{n} setów",
+    knockoutFirstRound: "Pierwsza runda",
+    byeModeByes: "Wolne losy",
+    byeModePlayin: "Runda wstępna",
+    byeModeHint:
+      "Gdy liczba drużyn nie jest potęgą dwójki: wolne losy pozwalają najlepszym pominąć 1. rundę, a runda wstępna najpierw przycina stawkę.",
+    thirdPlaceLabel: "Mecz o 3. miejsce",
+    groupCountLabel: "Liczba grup",
+    advanceLabel: "Drużyny awansujące z grupy",
+    advanceValue: "Najlepsze {n}",
+    leagueLegsLabel: "Rundy",
+    leagueSingle: "Pojedyncza (każdy raz)",
+    leagueDouble: "Podwójna (mecz i rewanż)",
+    reviewScoring: "Punktacja",
+    reviewScoringPoints: "Punkty — wygrywa wyższy wynik",
+    reviewScoringSets: "Do {n} wygranych setów",
     back: "← Wstecz",
     continue: "Dalej →",
     start: "🎾 Rozpocznij turniej",
@@ -501,6 +528,8 @@ const pl: Dictionary = {
     openPresenter: "🖥️ Otwórz pełnoekranowy widok kortów",
     presenterHint:
       "Prowadź całą rundę z jednego dużego ekranu — korty, wyniki i sterowanie rundami.",
+    competitiveReady: "Wszystkie mecze rozegrane — można zamknąć i przyznać punkty rankingowe.",
+    competitiveInProgress: "Wpisuj wyniki po zakończeniu meczów — zwycięzcy awansują automatycznie.",
     startRound: "Rozpocznij rundę {number} →",
     playFinal: "🏁 Zagraj rundę FINAŁOWĄ (1. i 2. vs 3. i 4.)",
     finalInPlay: "Trwa runda finałowa — zamknij turniej, gdy wszystkie wyniki będą wpisane.",
@@ -700,6 +729,46 @@ const pl: Dictionary = {
     finishedSubtitle:
       "Świetny turniej! Sprawdź wyniki końcowe albo wróć do panelu sterowania.",
   },
+  competitive: {
+    bracket: "Drabinka",
+    groupStage: "Faza grupowa",
+    knockoutStage: "Faza pucharowa",
+    leagueTable: "Tabela ligowa",
+    fixtures: "Mecze",
+    tbd: "?",
+    bye: "Wolny los",
+    winnerOf: "Zwycięzca: {label}",
+    loserOf: "Przegrany: {label}",
+    groupPlaceShort: "{place} · Grupa {group}",
+    playIn: "Runda wstępna",
+    thirdPlace: "Mecz o 3. miejsce",
+    final: "Finał",
+    champion: "Zwycięzca",
+    runnerUp: "Finalista",
+    qualifies: "A",
+    qualifiesTitle: "Awans do fazy pucharowej",
+    awaiting: "Oczekiwanie na wcześniejsze wyniki",
+    vs: "vs",
+    played: "Rozegrany",
+    enterScore: "Wpisz wynik",
+    save: "Zapisz",
+    saved: "Zapisano ✓",
+    addSet: "+ Dodaj seta",
+    setLabel: "Set {n}",
+    pointsHint: "Wpisz wynik każdej strony — wygrywa wyższy.",
+    setsHint: "Wpisz gemy w każdym secie (do {n} wygranych setów).",
+    pinLabel: "PIN kortu",
+    pinPlaceholder: "PIN",
+    pinRequired: "Ten turniej wymaga PIN-u do wpisania wyniku.",
+    pinInvalid: "Błędny PIN — spróbuj ponownie.",
+    invalidScore: "Wpisz poprawny wynik.",
+    networkError: "Błąd sieci — spróbuj ponownie.",
+    matchWinnerNeeded: "Mecz musi mieć zwycięzcę (bez remisów).",
+    groupLabel: "Grupa {group}",
+    advancesNote: "Najlepsze {n} z każdej grupy awansują do fazy pucharowej.",
+    noneReady: "Żaden mecz nie jest jeszcze gotowy do gry.",
+    round: "Runda {n}",
+  },
   formats: {
     americanoLabel: "Americano",
     americanoDescription:
@@ -713,6 +782,15 @@ const pl: Dictionary = {
     mexicanoTeamLabel: "Mexicano Drużynowe",
     mexicanoTeamDescription:
       "Stałe pary — drużyny są dobierane na nowo co rundę wg aktualnej klasyfikacji: 1. vs 2., 3. vs 4., i tak dalej.",
+    knockoutTeamLabel: "Pucharowy",
+    knockoutTeamDescription:
+      "Drabinka drużynowa na wylot — klasyczne losowanie; przegrywasz i odpadasz. Nieparzyste stawki rozwiązuje się wolnym losem lub rundą wstępną.",
+    groupsTeamLabel: "Grupy + Puchar",
+    groupsTeamDescription:
+      "Drużyny grają round-robin w grupach, a najlepsze awansują do drabinki pucharowej rozstawionej wg miejsc w grupach.",
+    leagueTeamLabel: "Liga",
+    leagueTeamDescription:
+      "Każda drużyna gra z każdą (opcjonalnie mecz i rewanż); tabela jest ustawiana wg punktów meczowych.",
   },
 };
 

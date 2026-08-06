@@ -4,6 +4,7 @@ import { dbConnect } from "@/lib/db";
 import { Tournament } from "@/lib/models";
 import { serialize, type TournamentJSON } from "@/lib/types";
 import { sanitizeEntrantsForPublic } from "@/lib/privacy";
+import { hydrateCompetitive } from "@/lib/competitive";
 import { CourtLive } from "@/components/public/CourtLive";
 
 export const dynamic = "force-dynamic";
@@ -22,10 +23,10 @@ export default async function CourtPage({
   if (!doc) notFound();
   const tournament = serialize<TournamentJSON>(doc);
   if (!tournament.courts.includes(court)) notFound();
-  const publicTournament: TournamentJSON = {
+  const publicTournament: TournamentJSON = hydrateCompetitive({
     ...tournament,
     entrants: sanitizeEntrantsForPublic(tournament.entrants),
-  };
+  });
 
   return (
     <div className="mx-auto max-w-3xl space-y-8 text-center">

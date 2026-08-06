@@ -4,9 +4,12 @@ import { notFound } from "next/navigation";
 import {
   computeStandings,
   roundPointsByEntrant,
+  isCompetitiveType,
   isTeamType,
   type EngineRound,
 } from "@/lib/engine";
+import { finalPlacement, hydrateCompetitive } from "@/lib/competitive";
+import { pointsForPosition } from "@/lib/ranking-points";
 import { formatLabel } from "@/lib/i18n/formats";
 import { createT } from "@/lib/i18n";
 import { getLocale } from "@/lib/i18n/server";
@@ -17,6 +20,7 @@ import { cn } from "@/lib/cn";
 import { medalFor } from "@/components/public/StandingsTable";
 import { entrantMap, formatDate, sideNames } from "@/components/public/helpers";
 import { ExportResults } from "@/components/public/ExportResults";
+import { CompetitiveView } from "@/components/competitive/CompetitiveView";
 
 export const dynamic = "force-dynamic";
 
@@ -32,12 +36,28 @@ export async function generateMetadata({
   const t = createT(await getLocale());
   const isActive = tournament.status === "active";
   const publicEntrants = sanitizeEntrantsForPublic(tournament.entrants);
-  const winner = isActive ? null : computeStandings(publicEntrants, tournament.rounds)[0];
+  let winnerName: string | undefined;
+  if (!isActive) {
+    if (isCompetitiveType(tournament.type)) {
+      const h = hydrateCompetitive({ ...tournament, entrants: publicEntrants });
+      const ids = finalPlacement({
+        type: h.type,
+        scoring: h.scoring ?? "points",
+        config: h.config ?? {},
+        entrants: publicEntrants,
+        groups: h.groups ?? [],
+        ties: h.ties ?? [],
+      });
+      winnerName = publicEntrants.find((e) => e.id === ids[0])?.name;
+    } else {
+      winnerName = computeStandings(publicEntrants, tournament.rounds)[0]?.name;
+    }
+  }
   const title = `${tournament.name} — ${t("resultsPage.titleSuffix")}`;
   const description = [
     club?.name,
     formatLabel(t, tournament.type),
-    isActive ? t("resultsPage.live") : winner ? `🏆 ${winner.name}` : undefined,
+    isActive ? t("resultsPage.live") : winnerName ? `🏆 ${winnerName}` : undefined,
   ]
     .filter(Boolean)
     .join(" · ");
@@ -57,33 +77,65 @@ export default async function ResultsPage({
   const { tournamentId } = await params;
   const data = await getTournamentWithClub(tournamentId);
   if (!data) notFound();
-  const { tournament, club } = data;
+  const { club } = data;
   const t = createT(await getLocale());
+  const competitive = isCompetitiveType(data.tournament.type);
+  const base = {
+    ...data.tournament,
+    entrants: sanitizeEntrantsForPublic(data.tournament.entrants),
+  };
+  const tournament = competitive ? hydrateCompetitive(base) : base;
 
-  const publicEntrants = sanitizeEntrantsForPublic(tournament.entrants);
+  const publicEntrants = tournament.entrants;
   const map = entrantMap(publicEntrants);
-  const standings = computeStandings(publicEntrants, tournament.rounds);
   const isActive = tournament.status === "active";
-  const roundPoints = tournament.rounds.map((r) =>
-    roundPointsByEntrant(r as EngineRound)
-  );
   const team = isTeamType(tournament.type);
   const who = team ? t("resultsPage.whoTeam") : t("resultsPage.whoPlayer");
 
-  const exportRows = standings.map((row, i) => ({
-    position: i + 1,
-    name: row.name,
-    players: row.players,
-    roundPoints: tournament.rounds.map(
-      (_, ri) => roundPoints[ri].get(row.entrantId) ?? null
-    ),
-    total: row.points,
-  }));
+  const standings = competitive ? [] : computeStandings(publicEntrants, tournament.rounds);
+  const roundPoints = competitive
+    ? []
+    : tournament.rounds.map((r) => roundPointsByEntrant(r as EngineRound));
+
+  // Competitive final order (bracket/table placement).
+  const competitivePlacement = competitive
+    ? finalPlacement({
+        type: tournament.type,
+        scoring: tournament.scoring ?? "points",
+        config: tournament.config ?? {},
+        entrants: publicEntrants,
+        groups: tournament.groups ?? [],
+        ties: tournament.ties ?? [],
+      })
+        .map((id) => map[id])
+        .filter(Boolean)
+    : [];
+
+  const exportRows = competitive
+    ? competitivePlacement.map((entrant, i) => ({
+        position: i + 1,
+        name: entrant.name,
+        players: entrant.players,
+        roundPoints: [] as (number | null)[],
+        total: pointsForPosition(i + 1),
+      }))
+    : standings.map((row, i) => ({
+        position: i + 1,
+        name: row.name,
+        players: row.players,
+        roundPoints: tournament.rounds.map(
+          (_, ri) => roundPoints[ri].get(row.entrantId) ?? null
+        ),
+        total: row.points,
+      }));
+  const exportRoundLabels = competitive
+    ? []
+    : tournament.rounds.map((r) => `R${r.number}${r.isFinal ? " 🏁" : ""}`);
   const exportSubtitle = [
     club?.name,
     formatDate(tournament.finishedAt ?? tournament.playedAt),
     formatLabel(t, tournament.type),
-    t("tournamentPage.pointsPerMatch", { points: tournament.matchPoints }),
+    competitive ? undefined : t("tournamentPage.pointsPerMatch", { points: tournament.matchPoints }),
   ]
     .filter(Boolean)
     .join("  ·  ");
@@ -137,9 +189,7 @@ export default async function ResultsPage({
         <ExportResults
           title={tournament.name}
           subtitle={exportSubtitle}
-          roundLabels={tournament.rounds.map(
-            (r) => `R${r.number}${r.isFinal ? " 🏁" : ""}`
-          )}
+          roundLabels={exportRoundLabels}
           rows={exportRows}
           labels={{
             position: "#",
@@ -151,14 +201,72 @@ export default async function ResultsPage({
         />
       )}
 
-      <section>
-        <h2 className="section-title mb-4">{t("resultsPage.roundByRound")}</h2>
-        <div className="table-wrap">
-          <table className="table-base">
-            <thead>
-              <tr>
-                <th className="w-12">{t("clubPage.position")}</th>
-                <th>{team ? t("resultsPage.team") : t("resultsPage.player")}</th>
+      {competitive && (
+        <>
+          <section>
+            <h2 className="section-title mb-4">{t("tournamentPage.finalStandings")}</h2>
+            <div className="table-wrap">
+              <table className="table-base">
+                <thead>
+                  <tr>
+                    <th className="w-12">{t("clubPage.position")}</th>
+                    <th>{team ? t("resultsPage.team") : t("resultsPage.player")}</th>
+                    <th className="text-right">{t("resultsPage.total")}</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {competitivePlacement.map((entrant, i) => {
+                    const position = i + 1;
+                    const medal = medalFor(position);
+                    return (
+                      <tr key={entrant.id} className={cn(position <= 3 && "bg-volt-400/[0.04]")}>
+                        <td
+                          className={cn(
+                            "font-bold",
+                            position === 1
+                              ? "text-volt-300"
+                              : position === 2
+                                ? "text-slate-300"
+                                : position === 3
+                                  ? "text-amber-600"
+                                  : "text-slate-500"
+                          )}
+                        >
+                          {medal ?? position}
+                        </td>
+                        <td>
+                          <span className="font-semibold text-white">{entrant.name}</span>
+                          {entrant.players && entrant.players.length > 0 && (
+                            <span className="mt-0.5 block text-xs text-slate-400">
+                              {entrant.players.join(" · ")}
+                            </span>
+                          )}
+                        </td>
+                        <td className="text-right text-base font-extrabold text-volt-300">
+                          {pointsForPosition(position)}
+                        </td>
+                      </tr>
+                    );
+                  })}
+                </tbody>
+              </table>
+            </div>
+          </section>
+          <section>
+            <CompetitiveView tournament={tournament} t={t} editable={false} />
+          </section>
+        </>
+      )}
+
+      {!competitive && (
+        <section>
+          <h2 className="section-title mb-4">{t("resultsPage.roundByRound")}</h2>
+          <div className="table-wrap">
+            <table className="table-base">
+              <thead>
+                <tr>
+                  <th className="w-12">{t("clubPage.position")}</th>
+                  <th>{team ? t("resultsPage.team") : t("resultsPage.player")}</th>
                 {tournament.rounds.map((r) => (
                   <th key={r.number} className="text-center">
                     R{r.number}
@@ -223,8 +331,10 @@ export default async function ResultsPage({
         <p className="mt-2 text-xs text-slate-500">
           {t("resultsPage.cellHint", { who })}
         </p>
-      </section>
+        </section>
+      )}
 
+      {!competitive && (
       <section>
         <h2 className="section-title mb-4">{t("resultsPage.everyRoundDetail")}</h2>
         <div className="grid gap-4 lg:grid-cols-2">
@@ -269,6 +379,7 @@ export default async function ResultsPage({
           ))}
         </div>
       </section>
+      )}
     </div>
   );
 }

@@ -6,6 +6,7 @@ import { apiError, HttpError, requireManagerOf } from "@/lib/auth";
 import { logAction } from "@/lib/audit";
 import { serialize, type TournamentJSON } from "@/lib/types";
 import { computeStandings } from "@/lib/engine";
+import { hydrateCompetitive } from "@/lib/competitive";
 import { sanitizeEntrantsForPublic } from "@/lib/privacy";
 
 export const dynamic = "force-dynamic";
@@ -27,8 +28,12 @@ export async function GET(
     const doc = await Tournament.findById(tournamentId).lean();
     if (!doc) throw new HttpError(404, "Tournament not found.");
 
-    const tournament = serialize<TournamentJSON>(doc);
-    tournament.entrants = sanitizeEntrantsForPublic(tournament.entrants);
+    const base = serialize<TournamentJSON>(doc);
+    base.entrants = sanitizeEntrantsForPublic(base.entrants);
+    // Competitive formats: re-resolve advancement + courts on read so polling
+    // always reflects the latest bracket/table state (self-healing).
+    const tournament = hydrateCompetitive(base);
+
     const standings = computeStandings(tournament.entrants, tournament.rounds);
 
     return NextResponse.json({ tournament, standings });

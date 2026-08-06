@@ -23,7 +23,12 @@ export type TournamentType =
   | "americano"
   | "mexicano"
   | "americano-team"
-  | "mexicano-team";
+  | "mexicano-team"
+  // Competitive team formats — a separate engine paradigm (bracket/group/
+  // league) that does NOT use the rounds[] round-generation model below.
+  | "knockout-team"
+  | "groups-team"
+  | "league-team";
 
 export interface Entrant {
   id: string;
@@ -87,12 +92,41 @@ export const TOURNAMENT_TYPES: {
     description:
       "Fixed pairs — teams are re-matched every round by the live standings: 1st vs 2nd, 3rd vs 4th, and so on.",
   },
+  {
+    value: "knockout-team",
+    label: "Knockout",
+    description:
+      "Single-elimination team bracket — a classic random draw; lose and you're out. Non-power-of-2 fields resolve with byes or a play-in round.",
+  },
+  {
+    value: "groups-team",
+    label: "Groups + Knockout",
+    description:
+      "Teams play a round-robin in groups, then the top teams advance to a knockout bracket seeded by group placement.",
+  },
+  {
+    value: "league-team",
+    label: "League",
+    description:
+      "Every team plays every other team (optionally home and away); the league table is ranked by match points.",
+  },
 ];
+
+/** Competitive formats (bracket/group/league) that use the ties[] model, not rounds[]. */
+export function isCompetitiveType(type: TournamentType): boolean {
+  return type === "knockout-team" || type === "groups-team" || type === "league-team";
+}
 
 export const MATCH_POINTS_OPTIONS = [16, 21, 24, 32];
 
 export function isTeamType(type: TournamentType): boolean {
-  return type === "americano-team" || type === "mexicano-team";
+  return (
+    type === "americano-team" ||
+    type === "mexicano-team" ||
+    type === "knockout-team" ||
+    type === "groups-team" ||
+    type === "league-team"
+  );
 }
 
 export function isMexicanoType(type: TournamentType): boolean {

@@ -481,8 +481,35 @@ const en = {
     seedingNoteMexicano: "a random lottery draw.",
     seedingNoteOther:
       "an optimized draw that minimizes repeated partners and opponents.",
+    seedingNoteKnockout:
+      "a random single-elimination bracket. Score each tie and winners advance automatically.",
+    seedingNoteGroups:
+      "round-robin groups first, then a knockout seeded by group placement.",
+    seedingNoteLeague:
+      "a round-robin league table ranked by match points.",
     seedingNotePrefix:
-      "Round 1 is generated the moment you start —",
+      "The draw is generated the moment you start —",
+    // Competitive-format options (basics step)
+    scoringLabel: "Scoring",
+    scoringPoints: "Points",
+    scoringSets: "Sets",
+    bestOfLabel: "Best of",
+    bestOfValue: "{n} sets",
+    knockoutFirstRound: "First round",
+    byeModeByes: "Byes",
+    byeModePlayin: "Play-in round",
+    byeModeHint:
+      "When the number of teams isn't a power of two: byes let top slots skip round 1, or a play-in round trims the field first.",
+    thirdPlaceLabel: "Play a third-place match",
+    groupCountLabel: "Number of groups",
+    advanceLabel: "Teams advancing per group",
+    advanceValue: "Top {n}",
+    leagueLegsLabel: "Rounds",
+    leagueSingle: "Single (play each once)",
+    leagueDouble: "Double (home & away)",
+    reviewScoring: "Scoring",
+    reviewScoringPoints: "Points — higher score wins",
+    reviewScoringSets: "Best of {n} sets",
     back: "← Back",
     continue: "Continue →",
     start: "🎾 Start tournament",
@@ -494,6 +521,8 @@ const en = {
     openPresenter: "🖥️ Open fullscreen court view",
     presenterHint:
       "Run the whole round from one big screen — courts, scores and round controls.",
+    competitiveReady: "All matches played — ready to close and award ranking points.",
+    competitiveInProgress: "Enter results as matches finish — winners advance automatically.",
     startRound: "Start round {number} →",
     playFinal: "🏁 Play FINAL round (1st & 2nd vs 3rd & 4th)",
     finalInPlay:
@@ -701,6 +730,46 @@ const en = {
     finishedSubtitle:
       "Great tournament! Check the final results or head back to the control panel.",
   },
+  competitive: {
+    bracket: "Bracket",
+    groupStage: "Group stage",
+    knockoutStage: "Knockout",
+    leagueTable: "League table",
+    fixtures: "Fixtures",
+    tbd: "TBD",
+    bye: "Bye",
+    winnerOf: "Winner of {label}",
+    loserOf: "Loser of {label}",
+    groupPlaceShort: "{place} · Group {group}",
+    playIn: "Play-in",
+    thirdPlace: "Third place",
+    final: "Final",
+    champion: "Champion",
+    runnerUp: "Runner-up",
+    qualifies: "Q",
+    qualifiesTitle: "Qualifies for the knockout",
+    awaiting: "Awaiting previous results",
+    vs: "vs",
+    played: "Played",
+    enterScore: "Enter result",
+    save: "Save",
+    saved: "Saved ✓",
+    addSet: "+ Add set",
+    setLabel: "Set {n}",
+    pointsHint: "Enter each side's score — higher wins.",
+    setsHint: "Enter games per set (best of {n}).",
+    pinLabel: "Court PIN",
+    pinPlaceholder: "PIN",
+    pinRequired: "This tournament needs a PIN to submit scores.",
+    pinInvalid: "Incorrect PIN — try again.",
+    invalidScore: "Enter a valid result.",
+    networkError: "Network error — please try again.",
+    matchWinnerNeeded: "The match needs a winner (no draws).",
+    groupLabel: "Group {group}",
+    advancesNote: "Top {n} of each group advance to the knockout.",
+    noneReady: "No matches are ready to play yet.",
+    round: "Round {n}",
+  },
   formats: {
     americanoLabel: "Americano",
     americanoDescription:
@@ -714,6 +783,15 @@ const en = {
     mexicanoTeamLabel: "Mexicano Team",
     mexicanoTeamDescription:
       "Fixed pairs — teams are re-matched every round by the live standings: 1st vs 2nd, 3rd vs 4th, and so on.",
+    knockoutTeamLabel: "Knockout",
+    knockoutTeamDescription:
+      "Single-elimination team bracket — a classic random draw; lose and you're out. Odd fields resolve with byes or a play-in round.",
+    groupsTeamLabel: "Groups + Knockout",
+    groupsTeamDescription:
+      "Teams play a round-robin in groups, then the top teams advance to a knockout bracket seeded by group placement.",
+    leagueTeamLabel: "League",
+    leagueTeamDescription:
+      "Every team plays every other team (optionally home and away); the table is ranked by match points.",
   },
 } as const;
 
